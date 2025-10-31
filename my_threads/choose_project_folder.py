@@ -55,7 +55,8 @@ class ChooseProjectFolderThread(QtCore.QThread):
             global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)              
             global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)  
             global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)             
-            global_vars.ui.pushButtonConcat.setEnabled(False)             
+            global_vars.ui.pushButtonConcat.setEnabled(False)
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)                   
             return 
         
         if not source_files_list:
@@ -73,7 +74,8 @@ class ChooseProjectFolderThread(QtCore.QThread):
             global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)            
             global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
             global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)                 
-            global_vars.ui.pushButtonConcat.setEnabled(False)       
+            global_vars.ui.pushButtonConcat.setEnabled(False)
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)                   
             return                  
 
         if source_old_excels_list:       
@@ -91,7 +93,8 @@ class ChooseProjectFolderThread(QtCore.QThread):
             global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)
             global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False) 
             global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)             
-            global_vars.ui.pushButtonConcat.setEnabled(False)  
+            global_vars.ui.pushButtonConcat.setEnabled(False)
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)             
             return                
 
 
@@ -109,7 +112,8 @@ class ChooseProjectFolderThread(QtCore.QThread):
             global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)
             global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False) 
             global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)             
-            global_vars.ui.pushButtonConcat.setEnabled(False)  
+            global_vars.ui.pushButtonConcat.setEnabled(False)
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)              
             return    
 
         global_vars.ui.project_folder_label.setStyleSheet('color: green')  
@@ -155,7 +159,8 @@ class ChooseProjectFolderThread(QtCore.QThread):
         global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)              
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False) 
         global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)              
-        global_vars.ui.pushButtonConcat.setEnabled(False)    
+        global_vars.ui.pushButtonConcat.setEnabled(False)
+        global_vars.ui.pushButtonMakeFiles.setEnabled(False)          
 
 
     def on_finished(self): # Вызывается при завершении потока

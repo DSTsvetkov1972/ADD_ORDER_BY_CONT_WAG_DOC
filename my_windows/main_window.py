@@ -101,9 +101,9 @@ class Ui_MainWindow(object):
         self.pushButtonConcat.setEnabled(False)        
         self.verticalLayoutButtons.addWidget(self.pushButtonConcat)        
 
-        self.pushButtonConcat = QPushButton("Создать файлы для 1-С")
-        self.pushButtonConcat.setEnabled(False)        
-        self.verticalLayoutButtons.addWidget(self.pushButtonConcat)    
+        self.pushButtonMakeFiles = QPushButton("Создать файлы для 1-С")
+        self.pushButtonMakeFiles.setEnabled(False)        
+        self.verticalLayoutButtons.addWidget(self.pushButtonMakeFiles)    
 
         
         #####################################################################################

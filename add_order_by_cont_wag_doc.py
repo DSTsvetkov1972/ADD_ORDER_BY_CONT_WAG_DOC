@@ -14,6 +14,7 @@ from my_threads.processing import ProcessingThread
 from my_threads.open_choosed_files import OpenChoosedFilesThread
 from my_threads.del_choosed_md_files import DelChoosedMDFilesThread
 from my_threads.concat import ConcatThread
+from my_threads.make_files import MakeFilesThread
 
 class LogInDialog(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -52,7 +53,8 @@ class MyWindow(QtWidgets.QWidget):
         self.log_in_check_thread.start()
 
         self.processing_thread.mysignal.connect(self.processing_thread.on_signal, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.concat_thread.mysignal.connect(self.processing_thread.on_signal, QtCore.Qt.ConnectionType.QueuedConnection)       
+        self.concat_thread.mysignal.connect(self.processing_thread.on_signal, QtCore.Qt.ConnectionType.QueuedConnection)
+        self.make_files_thread.mysignal.connect(self.processing_thread.on_signal, QtCore.Qt.ConnectionType.QueuedConnection)   
 
         global_vars.ui.action_log_in.triggered.connect(self.show_log_in_dialog)
         global_vars.ui.action_log_in_check.triggered.connect(lambda: self.log_in_check_thread.start())          
@@ -87,7 +89,11 @@ class MyWindow(QtWidgets.QWidget):
 
         global_vars.ui.pushButtonConcat.clicked.connect(self.concat_thread.on_clicked)
         self.concat_thread.started.connect(self.concat_thread.on_started)
-        self.concat_thread.finished.connect(self.concat_thread.on_finished)        
+        self.concat_thread.finished.connect(self.concat_thread.on_finished)
+
+        global_vars.ui.pushButtonMakeFiles.clicked.connect(self.make_files_thread.on_clicked)
+        self.make_files_thread.started.connect(self.make_files_thread.on_started)
+        self.make_files_thread.finished.connect(self.make_files_thread.on_finished)           
 
     def show_log_in_dialog(self):
         self.login_dialog_window = LogInDialog(parent = None)
@@ -120,7 +126,8 @@ class MyWindow(QtWidgets.QWidget):
     open_choosed_files_thread = OpenChoosedFilesThread(md_files = False)  
     open_choosed_mdfiles_thread = OpenChoosedFilesThread(md_files = True)      
     del_choosed_md_files_thread = DelChoosedMDFilesThread()
-    concat_thread = ConcatThread()      
+    concat_thread = ConcatThread()
+    make_files_thread = MakeFilesThread()  
 
 ####################################################################################
 ####################################################################################  

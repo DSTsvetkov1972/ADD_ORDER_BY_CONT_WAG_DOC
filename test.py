@@ -1,18 +1,23 @@
+import pandas as pd
+from pprint import pprint
 
-cell_khaki = 'k'
-cell_white = 'h'
+df = pd.DataFrame(
+    [
+        {
+            'a': 11,
+            'b': 'bbb1'
+        },
+        {
+            'a': 12,
+            'b': 'bbb2'
+        },
+        {
+            'a': 12,
+            'b': 'bbb2'
+        }
+    ])
 
-header = {
-    (1, 3): ('№', cell_khaki),
-    (1, 4): ('№ Вагона', cell_khaki),
-    (1, 5): ('Номер накладной', cell_khaki),
-    (1, 6): ('№ Контейнера', cell_khaki),
-    (1, 7): ('Ст. отправления', cell_khaki),
-    (1, 8): ('Ст. назначения', cell_khaki),
-    (1, 12): ('Дата отправки', cell_khaki),       
-    (1, 13): ('использование пути', cell_khaki),
-    (1, 14): (' тариф груженый', cell_khaki)
-    }
-
-for k, (column_name, column_fill) in header.items():
-    print(k, column_name, column_fill)
+pprint(df)
+df['a'] = df['a'].apply(str)
+df['scep'] = df['a'] + '|' + df['b']
+print(df)

@@ -45,7 +45,7 @@ class LogInCheck(QtCore.QThread):
                     return  
                 except:
                     connection.execute("""SELECT 1""")   
-                    global_vars.ui.login_label.setStyleSheet("color: red")
+                    global_vars.ui.login_label.setStyleSheet("color: orange")
                     global_vars.ui.login_label.setText(f"Пользователь {params[3]} подключен к базе {params[2]}, НО БЕЗ ПРАВА СОЗДАВАТЬ ТАБЛИЦЫ!!!") 
                     global_vars.ui.action_log_in_check.setEnabled(True)
                     global_vars.ui.action_log_out.setEnabled(True)  

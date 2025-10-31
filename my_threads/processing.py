@@ -522,7 +522,8 @@ class ProcessingThread(QtCore.QThread):
         ws.column_dimensions["B"].width = max_b+2
 
 
-        global_vars.ui.pushButtonConcat.setEnabled(True)     
+        global_vars.ui.pushButtonConcat.setEnabled(True)
+        global_vars.ui.pushButtonMakeFiles.setEnabled(True)             
 
         # Закрепляем области
         freeze_cell = ws.cell(column=3, row=2)
@@ -623,7 +624,7 @@ class ProcessingThread(QtCore.QThread):
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonConcat.setEnabled(False)
-
+        global_vars.ui.pushButtonMakeFile.setEnabled(False)
         global_vars.ui.info_label.setStyleSheet('color: blue')        
 
 

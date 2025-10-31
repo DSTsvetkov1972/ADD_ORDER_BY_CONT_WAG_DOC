@@ -8,21 +8,29 @@ from time import sleep
 from my_threads.functions import check_files_modified
 from openpyxl import load_workbook, styles
 from openpyxl.utils.cell import get_column_letter
+from my_functions.sql import sql
+from my_functions.dwh import get_df_of_click
+import pyperclip
 
-class ConcatThread(QtCore.QThread):
+class MakeFilesThread(QtCore.QThread):
  
     mysignal = QtCore.Signal(str)
+
+    def on_signal(self,mysignal):
+        global_vars.ui.info_label.setStyleSheet('color: blue')
+        print("vs nen")
+        print(str(mysignal))       
+        global_vars.ui.info_label.setText(mysignal)
 
 
     def __init__ (self, parent=None):
         QtCore.QThread.__init__(self, parent) 
-        self.message_title = "Объединение"
+        self.message_title = "Делаем файлы"
         
         
     def clean_folder_marked(self, project_folder):
 
         errors_list = []
-
 
         source_files = list(os.walk(os.path.join(global_vars.project_folder,'.Исходники')))[0][2]
         marked_files = [file for file in list(os.walk(os.path.join(global_vars.project_folder,'.Размеченные')))[0][2] if file[0] != '~']
@@ -42,13 +50,19 @@ class ConcatThread(QtCore.QThread):
         return ("\n" + ">" + "\n").join(errors_list)
 
 
+
+
     def concat_dfs(self, project_folder):
         global_vars.ui.info_label.setStyleSheet('color: blue')
         #project_folder = os.path.join(r'C:\Users\TsvetkovDS\Documents\Оперативная папка\.Тест')
-        random_suffix = random.randrange(0,1000000)
-        file_field_name = f"file_({random_suffix})"
-        sheet_field_name = f"sheet_({random_suffix})"        
-        source_row_field_name = f"source_row_({random_suffix})"
+        #random_suffix = random.randrange(0,1000000)
+        #file_field_name = f"file_({random_suffix})"
+        #sheet_field_name = f"sheet_({random_suffix})"        
+        #source_row_field_name = f"source_row_({random_suffix})"
+
+        file_field_name = "source_file"
+        sheet_field_name = "sorce_sheet"        
+        source_row_field_name = "source_row"        
 
         marked_folder = os.path.join(project_folder, r".Размеченные")
         files = [file for file in list(os.walk(os.path.join(project_folder, '.Размеченные')))[0][2] if file[0] != "~"]
@@ -96,10 +110,16 @@ class ConcatThread(QtCore.QThread):
 
 
         if dfs_to_concat:
-            self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                               f"Создаём итоговую таблицу") 
-            # sleep(0.0001) 
+            self.mysignal.emit(
+                f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
+                f"Создаём список вагонов, накладных, контейнеров для загрузки в DWH"
+                ) 
+            
+
+            global_vars.ui.login_label.setStyleSheet('color: orange')
+
             result_df = pd.concat(dfs_to_concat)
+
          
             result_df_columns = list(result_df.columns)
             
@@ -113,7 +133,44 @@ class ConcatThread(QtCore.QThread):
                 result_df = result_df[result_df_columns + [file_field_name, sheet_field_name, source_row_field_name]]
                 self.result_df_len = len(result_df)
             
+            print("Датафреймы слиты в один для загрузки в DWH")
+            result_df['№ Вагона'] = result_df['№ Вагона'].apply(str)
+            result_df['Номер накладной'] = result_df['Номер накладной'].apply(str)
+            result_df['№ Контейнера'] = result_df['№ Контейнера'].apply(str)
 
+            result_df['Сцеп'] = (
+                result_df['№ Вагона'] + '|' +
+                result_df['Номер накладной'] + '|' +
+                result_df['№ Контейнера']
+            )
+        
+            
+            scep_series = result_df['Сцеп']
+            #print(scep_series)
+            scep_series.drop_duplicates(inplace=True)
+            scep_str = '\n'.join(scep_series)
+            #pyperclip.copy(scep_str)
+            sql_str = sql(scep_str)
+            #pyperclip.copy(sql_str)
+            #print("в буфере")
+
+            self.mysignal.emit(
+                f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
+                f"Получаем данные из DWH"
+                )
+
+            
+            sql_res_df = get_df_of_click(sql_str)
+            sql_res_df = sql_res_df.fillna("")
+
+
+            result_df = result_df.merge(sql_res_df, how='left', on=['Сцеп'])
+            #result_df.drop('Сцеп')
+            #print(result_df)
+
+
+            return
+        
             if  self.result_df_len < 1048576: 
                 self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                    f"Записываем результат в result.xlsx'")   
@@ -160,9 +217,7 @@ class ConcatThread(QtCore.QThread):
                 os.startfile(os.path.join(project_folder,'result.csv'))                
 
 
-    def on_signal(self,mysignal):
-        global_vars.ui.info_label.setStyleSheet('color: blue')            
-        global_vars.ui.info_label.setText(mysignal)
+
 
 
     def run(self): 
@@ -173,6 +228,7 @@ class ConcatThread(QtCore.QThread):
         self.is_src_files_modifyed = check_files_modified('.Исходники')
         self.is_md_files_modifyed = check_files_modified('.Размеченные')
 
+        """
         if os.path.exists(os.path.join(global_vars.project_folder, "~$result.xlsx")):
             global_vars.ui.info_label.setStyleSheet('color: red') 
             self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'                
@@ -186,6 +242,7 @@ class ConcatThread(QtCore.QThread):
             global_vars.ui.info_label.setText(self.error_message)
             # os.startfile(os.path.join(global_vars.project_folder, "result.csv"))                   
             return
+        """
 
         if self.is_src_files_modifyed:
             global_vars.ui.info_label.setStyleSheet('color: red')
@@ -201,7 +258,7 @@ class ConcatThread(QtCore.QThread):
                                   'Перезапустите обработку!')  
             # global_vars.ui.info_label.setText(self.error_message)
             return  
-              
+        """      
         if os.path.exists(os.path.join(global_vars.project_folder, "result.xlsx")):
             try:
                 os.remove(os.path.join(global_vars.project_folder, "result.xlsx"))
@@ -211,6 +268,7 @@ class ConcatThread(QtCore.QThread):
                 #global_vars.ui.info_label.setText(self.error_message)
                 os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))                
                 return
+        
 
         if os.path.exists(os.path.join(global_vars.project_folder, "result.xlsx")):
             try:
@@ -221,6 +279,7 @@ class ConcatThread(QtCore.QThread):
                 #global_vars.ui.info_label.setText(self.error_message)
                 # os.startfile(os.path.join(global_vars.project_folder, "result.#sv"))                   
                 return
+        """
 
         self.error_message = ""
         self.warning_message = ""        
@@ -240,7 +299,7 @@ class ConcatThread(QtCore.QThread):
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)           
         global_vars.ui.pushButtonConcat.setEnabled(False)        
-        global_vars.ui.pushButtonMakeFiles.setEnabled(False)    
+        global_vars.ui.pushButtonMakeFiles.setEnabled(False)
 
     def on_finished(self): # Вызывается при завершении потока
         global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)  
@@ -251,10 +310,11 @@ class ConcatThread(QtCore.QThread):
 
         if self.is_src_files_modifyed or self.is_md_files_modifyed:
             global_vars.ui.pushButtonConcat.setEnabled(False)
-            global_vars.ui.pushButtonMakeFiles.setEnabled(False)              
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)                 
         else:
-            global_vars.ui.pushButtonConcat.setEnabled(True) 
-            global_vars.ui.pushButtonMakeFiles.setEnabled(True)
+            global_vars.ui.pushButtonConcat.setEnabled(True)
+            global_vars.ui.pushButtonMakeFiles.setEnabled(True)             
+
          
 
         if self.error_message:
@@ -272,8 +332,5 @@ class ConcatThread(QtCore.QThread):
                                            self.warning_message,
                                            buttons=QtWidgets.QMessageBox.StandardButton.Ok)             
         else:
-            global_vars.ui.info_label.setStyleSheet('color: green')   
-            if self.result_df_len < 1048576:          
-                global_vars.ui.info_label.setText(f'Результат содержит {self.result_df_len} строк и загружен файл result.xlsx')
-            else:
-                global_vars.ui.info_label.setText(f'Результат содержит {self.result_df_len} строк и загружен файл result.csv')
+            global_vars.ui.info_label.setStyleSheet('color: green')             
+            global_vars.ui.info_label.setText('Файлы для загрузки в 1-С подготовленны!')

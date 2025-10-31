@@ -117,7 +117,7 @@ class XLS_TO_xlsxThread(QtCore.QThread):
         global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)        
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonConcat.setEnabled(False)        
-
+        global_vars.ui.pushButtonMakeFiles.setEnabled(False)
 
     def on_finished(self): # Вызывается при завершении потока
         sleep(0.1)

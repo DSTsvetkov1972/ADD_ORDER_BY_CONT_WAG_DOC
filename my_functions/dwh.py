@@ -1,14 +1,10 @@
 import pandas as pd
-import ctypes
 import os
 import win32api, win32con
-
+import global_vars
 
 import datetime
-import tkinter
-from tkinter import filedialog
-#import pyperclip
-from tkinter import messagebox
+import pyperclip
 from clickhouse_driver import Client
 from datetime import datetime
 # from params import *
@@ -21,15 +17,24 @@ import global_vars
 
 
 def get_df_of_click(query: str):
+    try:
         params = get_params()
-        connection=Client(host   = params[0],
-                        port     = params[1],
-                        database = params[2],
-                        user     = params[3],
-                        password = params[4],
-                        secure=True,verify=False)
+        connection=Client(
+            host=params[0],
+            port=params[1],
+            database=params[2],
+            user=params[3],
+            password=params[4],
+            secure=True,verify=False
+            )
+        
         with connection:
             return connection.query_dataframe(query)
+        
+    except Exception as e:
+        global_vars.ui.login_label.setStyleSheet("color: red")
+        global_vars.ui.login_label.setText(f"Ошибка DWH. Описание ошибки скопировано в буфер обмена {str(e)}")
+        pyperclip.copy(e)
         
 def execute_sql_click(query, operation_name = ''):
         print(Fore.CYAN, query, Fore.WHITE)

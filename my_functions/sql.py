@@ -1,6 +1,5 @@
 def sql (doc_cont_vag):
-    return f"""
-WITH
+    return f"""WITH
 YOUR_EXCEL AS (
 SELECT
 --МЕЖДУ ОДИНАРНЫХ КОВЫЧЕК ПОДСТАВЬТЕ `№ платформы`,`№ отправки`,`№ контейнера` ИЗ ЭКСЕЛЬ
@@ -15,22 +14,22 @@ SELECT
 ),
 YOUR_EXCEL AS (
 SELECT
-	arrayJoin(splitByChar('\r', replace(`Сцеп`, '\n', ''))) AS `Номер накладной|№ Контейнера|№ Вагона`
+	arrayJoin(splitByChar(char(10), replace(`Сцеп`, char(13), ''))) AS `№ Вагона|Номер накладной|№ Контейнера`
 FROM
 	YOUR_EXCEL
 WHERE
-	length(`Номер накладной|№ Контейнера|№ Вагона`)>2
+	length(`№ Вагона|Номер накладной|№ Контейнера`)>2
 --) SELECT * FROM YOUR_EXCEL
 ),
 YOUR_EXCEL AS (
 SELECT
-	`Номер накладной|№ Контейнера|№ Вагона`,
-	(splitByChar('|', `Номер накладной|№ Контейнера|№ Вагона`) AS parts)[1] AS `Номер накладной`,
-	parts[2] AS `№ Контейнера`,
-	parts[3] AS `№ Вагона`
+	`№ Вагона|Номер накладной|№ Контейнера`,
+	(splitByChar('|', `№ Вагона|Номер накладной|№ Контейнера`) AS parts)[1] AS `№ Вагона`,
+	parts[2] AS `Номер накладной`,
+	parts[3] AS `№ Контейнера`
 FROM
 	YOUR_EXCEL
---) SELECT * FROM YOUR_EXCEL WHERE `№ Вагона`='94207792'
+--) SELECT * FROM YOUR_EXCEL --WHERE `№ Вагона`='94207792'
 ),
 ETRAN_CAR AS (
 SELECT
@@ -102,16 +101,16 @@ WHERE
 --) SELECT * FROM ETRAN WHERE order_id IS NULL
 )
 SELECT
-	YOUR_EXCEL.*,
-	invoiceid,
-	invdatecreate,
-	invfrwsubcode,
-	order_id AS `подтянуто автоматически`,
+	YOUR_EXCEL.`№ Вагона|Номер накладной|№ Контейнера` AS `Сцеп`,
+	order_id AS `Номер заказа`,
 	multiIf(
 		order_id='', 'не определился',
 		substring(order_id, 1, 2)<>'32' AND substring(order_id, 1, 2)<>'60', 'странный результат',
 		Null
-	) AS `проверка`
+	) AS `проверка`,
+	invoiceid,
+	invdatecreate,
+	invfrwsubcode
 FROM
 	YOUR_EXCEL
 	LEFT JOIN ETRAN ON ETRAN.carnumber  = YOUR_EXCEL.`№ Вагона` AND ETRAN.contnumber  = YOUR_EXCEL.`№ Контейнера` AND ETRAN.invnumber  = YOUR_EXCEL.`Номер накладной`
