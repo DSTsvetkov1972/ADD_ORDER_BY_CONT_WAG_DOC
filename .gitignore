@@ -1,0 +1,7 @@
+.venv
+__pycache__
+~*
+output
+.session_folder
+processing_cell_by_cell.py
+.config
