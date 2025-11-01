@@ -2,11 +2,12 @@ from PySide6 import QtWidgets, QtCore
 from colorama import Fore
 from datetime import datetime
 import global_vars 
-import os, random
+import os, shutil
 import pandas as pd
 from time import sleep
 from my_threads.functions import check_files_modified
 from openpyxl import load_workbook, styles
+from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils.cell import get_column_letter
 from my_functions.sql import sql
 from my_functions.dwh import get_df_of_click
@@ -83,7 +84,7 @@ class MakeFilesThread(QtCore.QThread):
                                             (columns_info_df['Ошибки маркировки'] == 'ok')]
                 
                 if not file_info.empty:
-                    s = int(file_info['s'].iloc[0])-1
+                    s = int(file_info['s'].iloc[0]) - 1
                     f = int(file_info['f'].iloc[0])
                     file_df = pd.read_excel(os.path.join(marked_folder,file), sheet_name=sheet, header=None).iloc[:,2:]
 
@@ -114,9 +115,7 @@ class MakeFilesThread(QtCore.QThread):
                 f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                 f"Создаём список вагонов, накладных, контейнеров для загрузки в DWH"
                 ) 
-            
 
-            global_vars.ui.login_label.setStyleSheet('color: orange')
 
             result_df = pd.concat(dfs_to_concat)
 
@@ -161,61 +160,86 @@ class MakeFilesThread(QtCore.QThread):
 
             
             sql_res_df = get_df_of_click(sql_str)
+            
             sql_res_df = sql_res_df.fillna("")
 
 
             result_df = result_df.merge(sql_res_df, how='left', on=['Сцеп'])
-            #result_df.drop('Сцеп')
-            #print(result_df)
+            result_df.rename(columns={'Номер_заказа': 'Номер заказа'}, inplace=True)
 
-
-            return
+            #print(result_df.columns)
+            #input()
         
-            if  self.result_df_len < 1048576: 
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Записываем результат в result.xlsx'")   
-                sleep(0.0001)   
-                res_file_name = os.path.join(project_folder,'result.xlsx')           
-                result_df.to_excel(res_file_name, index=False)
-
-                # задаём ширину столбцов по размеру заголовка
-                wb = load_workbook(res_file_name)
-                ws = wb.active
-
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Подгоняем ширину столбцов под длины заголовков")
-
-                for n, column in enumerate(list(result_df.columns), 1):
-                    ws.column_dimensions[get_column_letter(n)].width = len(str(column))*1.1 + 5
-
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Замораживаем строку заголовков")
-                ws.auto_filter.ref = ws.dimensions    
-                
-                ws.freeze_panes = ws.cell(column=1, row=2)
-
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Задаём цвет строки заголовков")
-                for col, column in enumerate(list(result_df.columns), start=1):
-                    cell = ws.cell(column=col, row = 1)
-                    # cell.fill = styles.PatternFill(start_color='FFFFC7CE', fill_type='solid')
-                    cell.fill = styles.PatternFill(start_color='FDE9D9', fill_type='solid')
-                    cell.font = styles.Font(color='974706', bold=True)
-                    cell.alignment = styles.Alignment(wrap_text=True,
-                                                    vertical='top',
-                                                    horizontal='center') 
-                    #cell.style.alignment.wrap_text=True
-
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                    f"Сохраняем файл")    
-                wb.save(res_file_name)
-                os.startfile(os.path.join(project_folder,'result.xlsx'))
+            if  result_df.empty:
+                pass
             else:
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Записываем результат в result.csv")                 
-                result_df.to_csv(os.path.join(project_folder,'result.csv', sep = '\t'), index=False)
-                os.startfile(os.path.join(project_folder,'result.csv'))                
+                file_sheet_df = result_df.groupby(['source_file', 'sorce_sheet'])
+                file_sheet_df = pd.DataFrame(file_sheet_df)
+                file_sheet_df = file_sheet_df.apply(lambda x: x)
+                for file_sheet_tuple in file_sheet_df.itertuples():
+                    file = file_sheet_tuple[1][0]
+                    sheet = file_sheet_tuple[1][1]
 
+                    file_1s = f'Форма отчета исполнителя МЛТ груженный, порожний_{file}_{sheet}.xlsx'                        
+
+                    self.mysignal.emit(
+                        f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
+                        f"Заполняем { file_1s }"
+                    )
+                    
+                    processing_file = os.path.join(
+                        project_folder,
+                        '.Обработка',
+                        file_1s 
+                        )
+                    
+                    ready_file = os.path.join(
+                        project_folder,
+                        '.Файлы для 1-С',
+                        file_1s 
+                        )
+                    
+                    
+                    df_to_1s = file_sheet_tuple[2][[
+                        '№', 'Дата отправки', 'Номер накладной', '№ Контейнера', '№ Вагона',
+                        'Ст. отправления', 'Ст. назначения', ' тариф груженый', 'использование пути', 'Номер заказа',
+                        'проверка', 'invoiceid' ,'invdatecreate', 'invfrwsubcode'
+                    ]]
+                    
+                    shutil.copy(
+                        os.path.join(
+                            project_folder,
+                            'Форма отчета исполнителя МЛТ груженный, порожний.xlsx'
+                            ),
+                        processing_file
+                    )
+
+                    wb = load_workbook(processing_file)
+                    ws = wb["Отчёт"]
+
+                    
+                    rows = dataframe_to_rows(df_to_1s)
+                    rows = [row[1:] for row in list(rows)[2:]]
+                    for r_idx, row in enumerate(rows, 11):
+                        for c_idx, value in enumerate(row, 1):
+                            ws.cell(row=r_idx, column=c_idx, value=value)
+
+                    # print(file_sheet_tuple[2]['Отчет к акту выполненных работ №'])
+                    # input()        
+
+                    ws['A1'] =  file_sheet_tuple[2]['Отчет к акту выполненных работ №'].iloc[0]
+                    ws['A2'] =  file_sheet_tuple[2]['Между'].iloc[0]
+
+                    ws['H4'] =  file_sheet_tuple[2]['Дата составления'].iloc[0]
+
+                    ws['B8'] =  file_sheet_tuple[2]['Наименование соисполнителя'].iloc[0]
+                    ws['C8'] =  file_sheet_tuple[2]['№ договора с соисполнителем'].iloc[0]
+                    ws['D8'] =  file_sheet_tuple[2]['Дата акта'].iloc[0]
+                    ws['E8'] =  file_sheet_tuple[2]['Дата начала отчётного периода'].iloc[0]
+                    ws['F8'] =  file_sheet_tuple[2]['Дата окончания отчётного периода'].iloc[0]                                                                                
+
+                    wb.save(ready_file)        
+                    os.remove(processing_file)
 
 
 
@@ -334,3 +358,4 @@ class MakeFilesThread(QtCore.QThread):
         else:
             global_vars.ui.info_label.setStyleSheet('color: green')             
             global_vars.ui.info_label.setText('Файлы для загрузки в 1-С подготовленны!')
+            os.startfile(os.path.join(global_vars.project_folder, '.Файлы для 1-С'))
