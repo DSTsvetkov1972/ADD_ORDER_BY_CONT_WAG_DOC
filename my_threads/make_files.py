@@ -265,6 +265,8 @@ class MakeFilesThread(QtCore.QThread):
             ws.merge_cells("A2:H2")
 
             ws['H4'] =  file_sheet_tuple[2]['Дата составления'].iloc[0]
+            ws['H4'].font = styles.Font(name='Times New Roman', size=9, italic=True, bold=False, color='000000')
+            ws['H4'].alignment = styles.Alignment(wrap_text=False, horizontal="right", vertical="center")
 
             #for cell in ['A1','A2','H4']:
                 #ws[cell].alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
