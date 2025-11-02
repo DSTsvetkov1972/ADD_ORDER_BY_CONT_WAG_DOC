@@ -93,7 +93,6 @@ class MakeFilesThread(QtCore.QThread):
                     f = int(file_info['f'].iloc[0])
                     file_df = pd.read_excel(os.path.join(marked_folder,file), sheet_name=sheet, header=None).iloc[:,2:]
 
-        
                     file_df_without_ffill = file_df.iloc[s:f]
                     file_df_without_ffill.columns = file_df.iloc[0]
                     column_names_without_ffill = [column_name for column_name in file_df.iloc[0] if pd.notna(column_name)]
@@ -111,171 +110,182 @@ class MakeFilesThread(QtCore.QThread):
                     file_df[file_field_name] = file
                     file_df[sheet_field_name] = sheet
                     file_df[source_row_field_name] = file_df.index + 1
-
+   
                     dfs_to_concat.append(file_df)
 
 
-        if dfs_to_concat:
-            self.mysignal.emit(
-                f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                f"Создаём список вагонов, накладных, контейнеров для загрузки в DWH"
-                ) 
+        self.mysignal.emit(
+            f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
+            f"Создаём список вагонов, накладных, контейнеров для загрузки в DWH"
+            ) 
 
 
-            result_df = pd.concat(dfs_to_concat)
+        result_df = pd.concat(dfs_to_concat)
 
-         
-            result_df_columns = list(result_df.columns)
-            
-            if (file_field_name in result_df_columns and
-                sheet_field_name in result_df_columns and 
-                source_row_field_name in result_df_columns):
-                
-                result_df_columns.remove(file_field_name)
-                result_df_columns.remove(sheet_field_name)
-                result_df_columns.remove(source_row_field_name)
-                result_df = result_df[result_df_columns + [file_field_name, sheet_field_name, source_row_field_name]]
-                self.result_df_len = len(result_df)
-            
-            print("Датафреймы слиты в один для загрузки в DWH")
-            result_df['№ Вагона'] = result_df['№ Вагона'].apply(str)
-            result_df['Номер накладной'] = result_df['Номер накладной'].apply(str)
-            result_df['№ Контейнера'] = result_df['№ Контейнера'].apply(str)
-
-            result_df['Сцеп'] = (
-                result_df['№ Вагона'] + '|' +
-                result_df['Номер накладной'] + '|' +
-                result_df['№ Контейнера']
-            )
         
+        result_df_columns = list(result_df.columns)
+        
+        if (file_field_name in result_df_columns and
+            sheet_field_name in result_df_columns and 
+            source_row_field_name in result_df_columns):
             
-            scep_series = result_df['Сцеп']
-            #print(scep_series)
-            scep_series.drop_duplicates(inplace=True)
-            scep_str = '\n'.join(scep_series)
-            #pyperclip.copy(scep_str)
-            sql_str = sql(scep_str)
-            #pyperclip.copy(sql_str)
-            #print("в буфере")
+            result_df_columns.remove(file_field_name)
+            result_df_columns.remove(sheet_field_name)
+            result_df_columns.remove(source_row_field_name)
+            result_df = result_df[result_df_columns + [file_field_name, sheet_field_name, source_row_field_name]]
+            self.result_df_len = len(result_df)
+        
+        if result_df.empty:
+            global_vars.ui.info_label.setStyleSheet('color: red') 
+            self.error_message = 'Нет корректных размеченных файлов!'                
+            return
+
+        print("Датафреймы слиты в один для загрузки в DWH")
+        result_df['№ Вагона'] = result_df['№ Вагона'].apply(str)
+        result_df['Номер накладной'] = result_df['Номер накладной'].apply(str)
+        result_df['№ Контейнера'] = result_df['№ Контейнера'].apply(str)
+
+        result_df['Сцеп'] = (
+            result_df['№ Вагона'] + '|' +
+            result_df['Номер накладной'] + '|' +
+            result_df['№ Контейнера']
+        )
+    
+        
+        scep_series = result_df['Сцеп']
+        #print(scep_series)
+        scep_series.drop_duplicates(inplace=True)
+        scep_str = '\n'.join(scep_series)
+        #pyperclip.copy(scep_str)
+        sql_str = sql(scep_str)
+        #pyperclip.copy(sql_str)
+        #print("в буфере")
+
+        self.mysignal.emit(
+            f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
+            f"Получаем данные из DWH"
+            )
+
+        
+        sql_res_df = get_df_of_click(sql_str)
+        
+
+
+        sql_res_df = sql_res_df.fillna("")
+
+        result_df = result_df.merge(sql_res_df, how='left', on=['Сцеп'])
+        result_df.rename(columns={'Номер_заказа': 'Номер заказа'}, inplace=True)
+        
+        file_sheet_df = result_df.groupby(['source_file', 'sorce_sheet'])
+        file_sheet_df = pd.DataFrame(file_sheet_df)
+        file_sheet_df = file_sheet_df.apply(lambda x: x)
+        for file_sheet_tuple in file_sheet_df.itertuples():
+            file = file_sheet_tuple[1][0]
+            sheet = file_sheet_tuple[1][1]
+
+            file_1s = f'Форма отчета исполнителя МЛТ груженный, порожний_{file}_{sheet}.xlsx'                        
 
             self.mysignal.emit(
                 f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                f"Получаем данные из DWH"
+                f"Заполняем { file_1s }"
+            )
+            
+            #processing_file = os.path.join(
+            #    project_folder,
+            #    '.Обработка',
+            #    file_1s 
+            #    )
+            
+            ready_file = os.path.join(
+                project_folder,
+                '.Файлы для 1-С',
+                file_1s 
+                )
+            
+            
+            df_to_1s = file_sheet_tuple[2][[
+                '№', 'Дата отправки', 'Номер накладной', '№ Контейнера', '№ Вагона',
+                'Ст. отправления', 'Ст. назначения', ' тариф груженый', 'использование пути', 'Номер заказа',
+                'проверка', 'invoiceid' ,'invdatecreate', 'invfrwsubcode'
+            ]]
+            
+            """
+            shutil.copy(
+                os.path.join(
+                    project_folder,
+                    'Форма отчета исполнителя МЛТ груженный, порожний.xlsx'
+                    ),
+                processing_file
+            )
+
+            wb = load_workbook(processing_file)
+            """
+
+            wb = Workbook()
+            wb.create_sheet("Отчёт", 0)
+            wb.active = wb["Отчёт"]
+            ws = wb["Отчёт"]
+
+            make_template(ws)
+            
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
                 )
 
             
-            sql_res_df = get_df_of_click(sql_str)
+            rows = dataframe_to_rows(df_to_1s)
+            rows = [row[1:] for row in list(rows)[2:]]
+            for r_idx, row in enumerate(rows, 11):
+                for c_idx, value in enumerate(row, 1):
+                    ws.cell(row=r_idx, column=c_idx, value=value)
+                    ws.cell(row=r_idx, column=c_idx).font = styles.Font(name='Times New Roman', size=9, bold=False, color='000000')
+                    ws.cell(row=r_idx, column=c_idx).alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
+                    if value and c_idx==11:
+                        ws.cell(row=r_idx, column=c_idx).fill = styles.PatternFill(start_color='ff0000', fill_type='solid')
+                        ws.cell(row=10, column=11).fill = styles.PatternFill(start_color='ff0000', fill_type='solid')
+                        filters = ws.auto_filter
+                        filters.ref = "K10"
+                    if c_idx<11:
+                        # print(r_idx, c_idx)
+                        ws.cell(row=r_idx, column=c_idx).border = thin_border
+
+            # print(file_sheet_tuple[2]['Отчет к акту выполненных работ №'])
+            # input()        
+
+            ws['A1'] =  file_sheet_tuple[2]['Отчет к акту выполненных работ №'].iloc[0]
+            ws['A1'].font = styles.Font(name='Times New Roman', size=11, bold=False, color='000000')
+            ws['A1'].alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
+            ws.merge_cells("A1:H1")
+            ws['A2'] =  file_sheet_tuple[2]['Между'].iloc[0]
+            ws['A2'].font = styles.Font(name='Times New Roman', size=11, bold=False, color='000000')
+            ws['A2'].alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
+            ws.merge_cells("A2:H2")
+
+            ws['H4'] =  file_sheet_tuple[2]['Дата составления'].iloc[0]
+
+            #for cell in ['A1','A2','H4']:
+                #ws[cell].alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
+                #   ws[cell].font = styles.Font(name='Times New Roman', size=9, bold=False, color='000000')
+                #ws.row_dimensions[8].width = 29    
+
             
+            ws['B8'] = file_sheet_tuple[2]['Наименование соисполнителя'].iloc[0]
+            ws['C8'] = file_sheet_tuple[2]['№ договора с соисполнителем'].iloc[0]
+            ws['D8'] = file_sheet_tuple[2]['Дата акта'].iloc[0]
+            ws['E8'] = file_sheet_tuple[2]['Дата начала отчётного периода'].iloc[0]
+            ws['F8'] = file_sheet_tuple[2]['Дата окончания отчётного периода'].iloc[0]
 
+            for cell in ['B8','C8','D8','E8','F8']:
+                ws[cell].border = thin_border
+                ws[cell].alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
+                ws[cell].font = styles.Font(name='Times New Roman', size=9, bold=False, color='000000')
+                #ws.row_dimensions[8].width = 29                                                                         
 
-            #print(result_df.columns)
-            #input()
-        
-            if  result_df.empty:
-                pass
-            else:
-                sql_res_df = sql_res_df.fillna("")
-
-                result_df = result_df.merge(sql_res_df, how='left', on=['Сцеп'])
-                result_df.rename(columns={'Номер_заказа': 'Номер заказа'}, inplace=True)
-                
-                file_sheet_df = result_df.groupby(['source_file', 'sorce_sheet'])
-                file_sheet_df = pd.DataFrame(file_sheet_df)
-                file_sheet_df = file_sheet_df.apply(lambda x: x)
-                for file_sheet_tuple in file_sheet_df.itertuples():
-                    file = file_sheet_tuple[1][0]
-                    sheet = file_sheet_tuple[1][1]
-
-                    file_1s = f'Форма отчета исполнителя МЛТ груженный, порожний_{file}_{sheet}.xlsx'                        
-
-                    self.mysignal.emit(
-                        f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                        f"Заполняем { file_1s }"
-                    )
-                    
-                    #processing_file = os.path.join(
-                    #    project_folder,
-                    #    '.Обработка',
-                    #    file_1s 
-                    #    )
-                    
-                    ready_file = os.path.join(
-                        project_folder,
-                        '.Файлы для 1-С',
-                        file_1s 
-                        )
-                    
-                    
-                    df_to_1s = file_sheet_tuple[2][[
-                        '№', 'Дата отправки', 'Номер накладной', '№ Контейнера', '№ Вагона',
-                        'Ст. отправления', 'Ст. назначения', ' тариф груженый', 'использование пути', 'Номер заказа',
-                        'проверка', 'invoiceid' ,'invdatecreate', 'invfrwsubcode'
-                    ]]
-                    
-                    """
-                    shutil.copy(
-                        os.path.join(
-                            project_folder,
-                            'Форма отчета исполнителя МЛТ груженный, порожний.xlsx'
-                            ),
-                        processing_file
-                    )
-
-                    wb = load_workbook(processing_file)
-                    """
-
-                    wb = Workbook()
-                    wb.create_sheet("Отчёт", 0)
-                    wb.active = wb["Отчёт"]
-                    ws = wb["Отчёт"]
-
-                    make_template(ws)
-                    
-                    thin_border = Border(
-                        left=Side(style='thin'),
-                        right=Side(style='thin'),
-                        top=Side(style='thin'),
-                        bottom=Side(style='thin')
-                        )
-
-                    
-                    rows = dataframe_to_rows(df_to_1s)
-                    rows = [row[1:] for row in list(rows)[2:]]
-                    for r_idx, row in enumerate(rows, 11):
-                        for c_idx, value in enumerate(row, 1):
-                            ws.cell(row=r_idx, column=c_idx, value=value)
-                            if value and c_idx==11:
-                                ws.cell(row=r_idx, column=c_idx).fill = styles.PatternFill(start_color='ff0000', fill_type='solid')
-                                ws.cell(row=10, column=11).fill = styles.PatternFill(start_color='ff0000', fill_type='solid')
-                                # ws.auto_filter.ref = ws.row_dimensions(10)
-                            if c_idx<11:
-                                # print(r_idx, c_idx)
-                                ws.cell(row=r_idx, column=c_idx).border = thin_border
-
-                    # print(file_sheet_tuple[2]['Отчет к акту выполненных работ №'])
-                    # input()        
-
-                    ws['A1'] =  file_sheet_tuple[2]['Отчет к акту выполненных работ №'].iloc[0]
-                    ws['A2'] =  file_sheet_tuple[2]['Между'].iloc[0]
-
-                    ws['H4'] =  file_sheet_tuple[2]['Дата составления'].iloc[0]
-
-                    
-                    ws['B8'] = file_sheet_tuple[2]['Наименование соисполнителя'].iloc[0]
-                    ws['B8'].border = thin_border
-                    ws['C8'] = file_sheet_tuple[2]['№ договора с соисполнителем'].iloc[0]
-                    ws['C8'].border = thin_border
-                    ws['D8'] = file_sheet_tuple[2]['Дата акта'].iloc[0]
-                    ws['D8'].border = thin_border
-                    ws['E8'] = file_sheet_tuple[2]['Дата начала отчётного периода'].iloc[0]
-                    ws['E8'].border = thin_border
-                    ws['F8'] = file_sheet_tuple[2]['Дата окончания отчётного периода'].iloc[0]
-                    ws['F8'].border = thin_border
-
-                    ws.row_dimensions[8].width = 29                                                                         
-
-                    wb.save(ready_file)        
-                    # os.remove(processing_file)
+            wb.save(ready_file)        
+            # os.remove(processing_file)
 
 
 

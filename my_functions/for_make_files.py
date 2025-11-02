@@ -32,9 +32,9 @@ def make_template(ws):
     ws.column_dimensions["M"].width = 18
     ws.column_dimensions["N"].width = 14
 
-    ws.row_dimensions[7].width = 36
+    # ws.row_dimensions[7].width = 36
     # ws.row_dimensions[8].width = 29
-    ws.row_dimensions[10].width = 24
+    # ws.row_dimensions[10].width = 24
 
     cell_khaki = styles.PatternFill(start_color='ddd9c4', fill_type='solid')
 

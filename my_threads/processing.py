@@ -434,105 +434,106 @@ class ProcessingThread(QtCore.QThread):
 
         result_first_and_second_line_df = pd.DataFrame()
 
-
-        for file_number, file in enumerate(files, 1):
-            marked_file = os.path.join(marked_folder, file)
-            with pd.ExcelFile(os.path.join(marked_folder,file)) as xlsx_file:
-                sheets = xlsx_file.sheet_names
-            
-            for sheet_number, sheet in enumerate(sheets, 1):
-                print(Fore.YELLOW, file, sheet, Fore.WHITE)                
-                self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Книга {file_number} из {len(files)} лист {sheet_number} из {len(sheets)}. Считываем размеченные колонки из файла {file} из листа {sheet}") 
-
-                errors_list = []
-
-                sheet_df =  pd.read_excel(marked_file, sheet_name = sheet, dtype = str, header=None)
+        if files:
+            for file_number, file in enumerate(files, 1):
+                marked_file = os.path.join(marked_folder, file)
+                with pd.ExcelFile(os.path.join(marked_folder,file)) as xlsx_file:
+                    sheets = xlsx_file.sheet_names
                 
+                for sheet_number, sheet in enumerate(sheets, 1):
+                    print(Fore.YELLOW, file, sheet, Fore.WHITE)                
+                    self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
+                                    f"Книга {file_number} из {len(files)} лист {sheet_number} из {len(sheets)}. Считываем размеченные колонки из файла {file} из листа {sheet}") 
 
-                if sheet_df.empty:
-                    headers_df = pd.DataFrame([None, None])                    
-                    s_f_check_dict = {'file':file, 'sheet':sheet, 's':'-', 'f':'-', 'Ошибки маркировки':'Пустой лист'}
-                    # continue 
+                    errors_list = []
 
-                 
-                else:
-                    sheet_rem = (sheet_df[0].iloc[0])
+                    sheet_df =  pd.read_excel(marked_file, sheet_name = sheet, dtype = str, header=None)
+                    
 
-                    errors_list.append(sheet_rem) # считываем комментарий если есть и добавляем в список
-                    s = value_searcher(sheet_df[0], 's')
-                    f = value_searcher(sheet_df[0], 'f')  
-                    header_rows = sheet_df.iloc[0:2]
-                    headers_df = sheet_df[sheet_df.columns[2:]].iloc[0:2] 
+                    if sheet_df.empty:
+                        headers_df = pd.DataFrame([None, None])                    
+                        s_f_check_dict = {'file':file, 'sheet':sheet, 's':'-', 'f':'-', 'Ошибки маркировки':'Пустой лист'}
+                        # continue 
 
-                    marking_errors = marking_checker(sheet_rem, s, f, header_rows)                    
-                    s_f_check_dict = {'file':file, 'sheet':sheet, 's':s, 'f':f, 'Ошибки маркировки':marking_errors}              
-                           
-                result_s_f_check_df = pd.concat([result_s_f_check_df, pd.DataFrame([s_f_check_dict])])
+                    
+                    else:
+                        sheet_rem = (sheet_df[0].iloc[0])
 
-                first_and_second_line_dict = {}
+                        errors_list.append(sheet_rem) # считываем комментарий если есть и добавляем в список
+                        s = value_searcher(sheet_df[0], 's')
+                        f = value_searcher(sheet_df[0], 'f')  
+                        header_rows = sheet_df.iloc[0:2]
+                        headers_df = sheet_df[sheet_df.columns[2:]].iloc[0:2] 
 
-                for column in headers_df.columns:
-                    # print(headers_df)              
-                    cell_in_first_line = headers_df.iloc[0].loc[column] 
-                    cell_in_second_line = headers_df.iloc[1].loc[column]
+                        marking_errors = marking_checker(sheet_rem, s, f, header_rows)                    
+                        s_f_check_dict = {'file':file, 'sheet':sheet, 's':s, 'f':f, 'Ошибки маркировки':marking_errors}              
+                            
+                    result_s_f_check_df = pd.concat([result_s_f_check_df, pd.DataFrame([s_f_check_dict])])
 
-                    if pd.notna(cell_in_first_line):
-                        first_and_second_line_dict[cell_in_first_line] = cell_in_first_line
-                    if pd.notna(cell_in_second_line):
-                        first_and_second_line_dict[f"<<< с заполнением >>> {cell_in_second_line}"] = cell_in_second_line
+                    first_and_second_line_dict = {}
 
-                    first_and_second_line_df = pd.DataFrame([first_and_second_line_dict])
+                    for column in headers_df.columns:
+                        # print(headers_df)              
+                        cell_in_first_line = headers_df.iloc[0].loc[column] 
+                        cell_in_second_line = headers_df.iloc[1].loc[column]
 
+                        if pd.notna(cell_in_first_line):
+                            first_and_second_line_dict[cell_in_first_line] = cell_in_first_line
+                        if pd.notna(cell_in_second_line):
+                            first_and_second_line_dict[f"<<< с заполнением >>> {cell_in_second_line}"] = cell_in_second_line
 
-                result_first_and_second_line_df = pd.concat([result_first_and_second_line_df, first_and_second_line_df]) 
-
-
-            result_first_and_second_line_df.fillna("-", inplace=True)
-
-        
-        result_df = pd.concat([result_s_f_check_df, result_first_and_second_line_df], axis=1)  
-        result_df_columns = list(dict.fromkeys(list(result_s_f_check_df.columns) +
-                                               list(result_first_and_second_line_df.columns)))
-        
-        result_df = result_df[result_df_columns]        
-
-        errors_list = list(map(str, errors_list))
+                        first_and_second_line_df = pd.DataFrame([first_and_second_line_dict])
 
 
-        result_df.to_excel(os.path.join(project_folder, "columns.xlsx"), index=False)   
-        
-        wb = load_workbook(os.path.join(project_folder, "columns.xlsx"))
-        ws = wb.active
-
-        # Ширину столбцов A, B задаём по содержимому
-        column_a = ws['A']
-        max_a = 0
-        for i in column_a:
-            max_a=max(max_a, len(str(i.value)))
-
-        ws.column_dimensions["A"].width = max_a+2
+                    result_first_and_second_line_df = pd.concat([result_first_and_second_line_df, first_and_second_line_df]) 
 
 
-        column_b = ws['B']
-        max_b = 0
-        for i in column_b:
-            max_b=max(max_b, len(str(i.value)))                
+                result_first_and_second_line_df.fillna("-", inplace=True)
 
-        ws.column_dimensions["B"].width = max_b+2
+            
+            result_df = pd.concat([result_s_f_check_df, result_first_and_second_line_df], axis=1)  
+            result_df_columns = list(dict.fromkeys(list(result_s_f_check_df.columns) +
+                                                list(result_first_and_second_line_df.columns)))
+            
+            result_df = result_df[result_df_columns]        
 
 
-        global_vars.ui.pushButtonConcat.setEnabled(True)
-        global_vars.ui.pushButtonMakeFiles.setEnabled(True)             
+            errors_list = list(map(str, errors_list))
 
-        # Закрепляем области
-        freeze_cell = ws.cell(column=3, row=2)
-        ws.freeze_panes = freeze_cell
 
-        ws.auto_filter.ref = ws.dimensions
+            result_df.to_excel(os.path.join(project_folder, "columns.xlsx"), index=False)   
+            
+            wb = load_workbook(os.path.join(project_folder, "columns.xlsx"))
+            ws = wb.active
 
-        wb.save(os.path.join(project_folder, "columns.xlsx"))
-        global_vars.ui.info_label.setStyleSheet('color: green')  
+            # Ширину столбцов A, B задаём по содержимому
+            column_a = ws['A']
+            max_a = 0
+            for i in column_a:
+                max_a=max(max_a, len(str(i.value)))
+
+            ws.column_dimensions["A"].width = max_a+2
+
+
+            column_b = ws['B']
+            max_b = 0
+            for i in column_b:
+                max_b=max(max_b, len(str(i.value)))                
+
+            ws.column_dimensions["B"].width = max_b+2
+
+
+            global_vars.ui.pushButtonConcat.setEnabled(True)
+            global_vars.ui.pushButtonMakeFiles.setEnabled(True)             
+
+            # Закрепляем области
+            freeze_cell = ws.cell(column=3, row=2)
+            ws.freeze_panes = freeze_cell
+
+            ws.auto_filter.ref = ws.dimensions
+
+            wb.save(os.path.join(project_folder, "columns.xlsx"))
+            global_vars.ui.info_label.setStyleSheet('color: green')  
 
 
     def on_signal(self,mysignal):          
@@ -624,7 +625,7 @@ class ProcessingThread(QtCore.QThread):
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonConcat.setEnabled(False)
-        global_vars.ui.pushButtonMakeFile.setEnabled(False)
+        global_vars.ui.pushButtonMakeFiles.setEnabled(False)
         global_vars.ui.info_label.setStyleSheet('color: blue')        
 
 
@@ -649,7 +650,7 @@ class ProcessingThread(QtCore.QThread):
             refresh_files_info('.Размеченные')             
 
         elif self.warning_message:
-            print(Fore.RED, self.err_list, Fore.RED)
+            # print(Fore.RED, self.err_list, Fore.RED)
             global_vars.ui.info_label.setStyleSheet('color: red')             
             global_vars.ui.info_label.setText(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                               f"{self.warning_message.replace('\n',' ')}")
