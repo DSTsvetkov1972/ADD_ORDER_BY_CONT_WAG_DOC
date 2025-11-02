@@ -2,15 +2,20 @@ from PySide6 import QtWidgets, QtCore
 from colorama import Fore
 from datetime import datetime
 import global_vars 
-import os, shutil
+import os
+import shutil
 import pandas as pd
 from time import sleep
 from my_threads.functions import check_files_modified
-from openpyxl import load_workbook, styles
+#from openpyxl import load_workbook, 
+from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.utils.cell import get_column_letter
+from openpyxl.styles.borders import Border, Side
+from openpyxl import styles
+#from openpyxl.utils.cell import get_column_letter
 from my_functions.sql import sql
 from my_functions.dwh import get_df_of_click
+from my_functions.for_make_files import make_template
 import pyperclip
 
 class MakeFilesThread(QtCore.QThread):
@@ -161,11 +166,7 @@ class MakeFilesThread(QtCore.QThread):
             
             sql_res_df = get_df_of_click(sql_str)
             
-            sql_res_df = sql_res_df.fillna("")
 
-
-            result_df = result_df.merge(sql_res_df, how='left', on=['Сцеп'])
-            result_df.rename(columns={'Номер_заказа': 'Номер заказа'}, inplace=True)
 
             #print(result_df.columns)
             #input()
@@ -173,6 +174,11 @@ class MakeFilesThread(QtCore.QThread):
             if  result_df.empty:
                 pass
             else:
+                sql_res_df = sql_res_df.fillna("")
+
+                result_df = result_df.merge(sql_res_df, how='left', on=['Сцеп'])
+                result_df.rename(columns={'Номер_заказа': 'Номер заказа'}, inplace=True)
+                
                 file_sheet_df = result_df.groupby(['source_file', 'sorce_sheet'])
                 file_sheet_df = pd.DataFrame(file_sheet_df)
                 file_sheet_df = file_sheet_df.apply(lambda x: x)
@@ -187,11 +193,11 @@ class MakeFilesThread(QtCore.QThread):
                         f"Заполняем { file_1s }"
                     )
                     
-                    processing_file = os.path.join(
-                        project_folder,
-                        '.Обработка',
-                        file_1s 
-                        )
+                    #processing_file = os.path.join(
+                    #    project_folder,
+                    #    '.Обработка',
+                    #    file_1s 
+                    #    )
                     
                     ready_file = os.path.join(
                         project_folder,
@@ -206,6 +212,7 @@ class MakeFilesThread(QtCore.QThread):
                         'проверка', 'invoiceid' ,'invdatecreate', 'invfrwsubcode'
                     ]]
                     
+                    """
                     shutil.copy(
                         os.path.join(
                             project_folder,
@@ -215,7 +222,21 @@ class MakeFilesThread(QtCore.QThread):
                     )
 
                     wb = load_workbook(processing_file)
+                    """
+
+                    wb = Workbook()
+                    wb.create_sheet("Отчёт", 0)
+                    wb.active = wb["Отчёт"]
                     ws = wb["Отчёт"]
+
+                    make_template(ws)
+                    
+                    thin_border = Border(
+                        left=Side(style='thin'),
+                        right=Side(style='thin'),
+                        top=Side(style='thin'),
+                        bottom=Side(style='thin')
+                        )
 
                     
                     rows = dataframe_to_rows(df_to_1s)
@@ -223,6 +244,13 @@ class MakeFilesThread(QtCore.QThread):
                     for r_idx, row in enumerate(rows, 11):
                         for c_idx, value in enumerate(row, 1):
                             ws.cell(row=r_idx, column=c_idx, value=value)
+                            if value and c_idx==11:
+                                ws.cell(row=r_idx, column=c_idx).fill = styles.PatternFill(start_color='ff0000', fill_type='solid')
+                                ws.cell(row=10, column=11).fill = styles.PatternFill(start_color='ff0000', fill_type='solid')
+                                # ws.auto_filter.ref = ws.row_dimensions(10)
+                            if c_idx<11:
+                                # print(r_idx, c_idx)
+                                ws.cell(row=r_idx, column=c_idx).border = thin_border
 
                     # print(file_sheet_tuple[2]['Отчет к акту выполненных работ №'])
                     # input()        
@@ -232,14 +260,22 @@ class MakeFilesThread(QtCore.QThread):
 
                     ws['H4'] =  file_sheet_tuple[2]['Дата составления'].iloc[0]
 
-                    ws['B8'] =  file_sheet_tuple[2]['Наименование соисполнителя'].iloc[0]
-                    ws['C8'] =  file_sheet_tuple[2]['№ договора с соисполнителем'].iloc[0]
-                    ws['D8'] =  file_sheet_tuple[2]['Дата акта'].iloc[0]
-                    ws['E8'] =  file_sheet_tuple[2]['Дата начала отчётного периода'].iloc[0]
-                    ws['F8'] =  file_sheet_tuple[2]['Дата окончания отчётного периода'].iloc[0]                                                                                
+                    
+                    ws['B8'] = file_sheet_tuple[2]['Наименование соисполнителя'].iloc[0]
+                    ws['B8'].border = thin_border
+                    ws['C8'] = file_sheet_tuple[2]['№ договора с соисполнителем'].iloc[0]
+                    ws['C8'].border = thin_border
+                    ws['D8'] = file_sheet_tuple[2]['Дата акта'].iloc[0]
+                    ws['D8'].border = thin_border
+                    ws['E8'] = file_sheet_tuple[2]['Дата начала отчётного периода'].iloc[0]
+                    ws['E8'].border = thin_border
+                    ws['F8'] = file_sheet_tuple[2]['Дата окончания отчётного периода'].iloc[0]
+                    ws['F8'].border = thin_border
+
+                    ws.row_dimensions[8].width = 29                                                                         
 
                     wb.save(ready_file)        
-                    os.remove(processing_file)
+                    # os.remove(processing_file)
 
 
 
@@ -308,7 +344,24 @@ class MakeFilesThread(QtCore.QThread):
         self.error_message = ""
         self.warning_message = ""        
         self.error_message = self.clean_folder_marked(global_vars.project_folder)
-        if not self.error_message:  
+        if not self.error_message:
+            try:
+                shutil.rmtree(
+                    os.path.join(
+                        global_vars.project_folder,
+                        '.Файлы для 1-С'
+                    )
+                )
+            except PermissionError:
+                global_vars.ui.info_label.setStyleSheet('color: red') 
+                self.error_message = 'Некоторые файлы из папки ".Файлы для 1-С" открыты на рабочем столе. Закройте их и снова запустите создание файлов!'                
+                return
+            os.mkdir(
+                os.path.join(
+                    global_vars.project_folder,
+                    '.Файлы для 1-С'
+                )
+            )
             self.concat_dfs(global_vars.project_folder)
 
 
