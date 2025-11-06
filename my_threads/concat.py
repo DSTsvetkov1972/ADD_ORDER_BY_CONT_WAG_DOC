@@ -175,16 +175,16 @@ class ConcatThread(QtCore.QThread):
 
         if os.path.exists(os.path.join(global_vars.project_folder, "~$result.xlsx")):
             global_vars.ui.info_label.setStyleSheet('color: red') 
-            self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'                
+            self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'
             global_vars.ui.info_label.setText(self.error_message)
-            os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))                   
+            os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))
             return
         
         if os.path.exists(os.path.join(global_vars.project_folder, "~$result.csv")):
-            global_vars.ui.info_label.setStyleSheet('color: red') 
-            self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаприсан!'                
+            global_vars.ui.info_label.setStyleSheet('color: red')
+            self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаприсан!'
             global_vars.ui.info_label.setText(self.error_message)
-            # os.startfile(os.path.join(global_vars.project_folder, "result.csv"))                   
+            # os.startfile(os.path.join(global_vars.project_folder, "result.csv"))
             return
 
         if self.is_src_files_modifyed:
@@ -217,9 +217,9 @@ class ConcatThread(QtCore.QThread):
                 os.remove(os.path.join(global_vars.project_folder, "result.xlsx"))
             except PermissionError:
                 global_vars.ui.info_label.setStyleSheet('color: red') 
-                self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаписан!'                
+                self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаписан!'
                 #global_vars.ui.info_label.setText(self.error_message)
-                # os.startfile(os.path.join(global_vars.project_folder, "result.#sv"))                   
+                # os.startfile(os.path.join(global_vars.project_folder, "result.#sv"))
                 return
 
         self.error_message = ""
@@ -234,7 +234,8 @@ class ConcatThread(QtCore.QThread):
     
 
     def on_started(self): # Вызывается при запуске потока
-        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(False)        
+        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(False)  
+        global_vars.ui.pushButtonXLStoXLSX.setEnabled(False)      
         global_vars.ui.pushButtonProcessing.setEnabled(False)
         global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)        
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
@@ -243,36 +244,37 @@ class ConcatThread(QtCore.QThread):
         global_vars.ui.pushButtonMakeFiles.setEnabled(False)    
 
     def on_finished(self): # Вызывается при завершении потока
-        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)  
+        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)
+        global_vars.ui.pushButtonXLStoXLSX.setEnabled(True)        
         global_vars.ui.pushButtonProcessing.setEnabled(True)
-        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(True)        
+        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(True)
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(True)
-        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(True)           
+        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(True)
 
         if self.is_src_files_modifyed or self.is_md_files_modifyed:
             global_vars.ui.pushButtonConcat.setEnabled(False)
-            global_vars.ui.pushButtonMakeFiles.setEnabled(False)              
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)
         else:
             global_vars.ui.pushButtonConcat.setEnabled(True) 
             global_vars.ui.pushButtonMakeFiles.setEnabled(True)
          
 
         if self.error_message:
-            global_vars.ui.info_label.setStyleSheet('color: red')             
+            global_vars.ui.info_label.setStyleSheet('color: red')
             global_vars.ui.info_label.setText(self.error_message.replace('\n',' '))
             QtWidgets.QMessageBox.critical(None,
                                            self.message_title,
                                            self.error_message,
                                            buttons=QtWidgets.QMessageBox.StandardButton.Ok) 
         elif self.warning_message:
-            global_vars.ui.info_label.setStyleSheet('color: red')             
+            global_vars.ui.info_label.setStyleSheet('color: red')
             global_vars.ui.info_label.setText(self.warning_message.replace('\n',' '))
             QtWidgets.QMessageBox.warning(None,
                                            self.message_title,
                                            self.warning_message,
-                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)             
+                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)
         else:
-            global_vars.ui.info_label.setStyleSheet('color: green')   
+            global_vars.ui.info_label.setStyleSheet('color: green')
             if self.result_df_len < 1048576:          
                 global_vars.ui.info_label.setText(f'Результат содержит {self.result_df_len} строк и загружен файл result.xlsx')
             else:

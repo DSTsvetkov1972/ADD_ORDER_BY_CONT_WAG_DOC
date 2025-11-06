@@ -1,6 +1,6 @@
 import  pandas as pd
 import os
-from datetime import datetime 
+from datetime import datetime
 from colorama import Fore
 from collections import Counter
 import sqlite3
@@ -19,10 +19,10 @@ def init_project():
     conn = sqlite3.connect(os.path.join(global_vars.project_folder, "files_info.db"))
     with conn:
         cur = conn.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS src_files_info (file TEXT, modifyed_time TEXT)")  
-        # cur.execute("CREATE TABLE IF NOT EXISTS actual_src_files_info (file TEXT, modifyed_time TEXT)")  
-        cur.execute("CREATE TABLE IF NOT EXISTS md_files_info (file TEXT, modifyed_time TEXT)")  
-        # cur.execute("CREATE TABLE IF NOT EXISTS actual_md_files_info (file TEXT, modifyed_time TEXT)")                          
+        cur.execute("CREATE TABLE IF NOT EXISTS src_files_info (file TEXT, modifyed_time TEXT)")
+        # cur.execute("CREATE TABLE IF NOT EXISTS actual_src_files_info (file TEXT, modifyed_time TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS md_files_info (file TEXT, modifyed_time TEXT)")
+        # cur.execute("CREATE TABLE IF NOT EXISTS actual_md_files_info (file TEXT, modifyed_time TEXT)")
 
 def value_searcher(col, value):
     #found = col[col==value]
@@ -34,7 +34,7 @@ def value_searcher(col, value):
         return "несколько"
     else:
         return str(found.index[0]+1)
-    
+
 def headers_checker(header_rows_df):
     i = 0
     errors_list = []
@@ -53,13 +53,13 @@ def headers_checker(header_rows_df):
                 errors_list.append(str(i))
     if errors_list != []:
         return 'Колонки: ' + ', '.join(errors_list) + ' промаркированы и "с заполнением" и "без"'   
-    
+
 def repeating_headers_checker(header_rows_df):
 
     headers_0 = [i for i in header_rows_df.loc[0][2:] if pd.notna(i)]
     headers_1 = [i for i in header_rows_df.loc[1][2:] if pd.notna(i)]
     if headers_0 == [] and headers_1 == []:
-        return ("Не выбрано ни одного заголовка")    
+        return ("Не выбрано ни одного заголовка")
 
     errors_list = [f"{k}-{v}" for k,v in Counter(headers_0 + headers_1).items() if v>1]
     if errors_list != []:
@@ -131,12 +131,12 @@ def check_files_modified(folder):
     print(f'check_files_modified {folder}')
     if folder=='.Размеченные':
         table='md_files_info'
-    elif folder=='.Исходники': 
+    elif folder=='.Исходники':
         table='src_files_info'
 
     folder_path = os.path.join(global_vars.project_folder, folder)  
 
-    files = list(os.walk(folder_path))[0][2]    
+    files = list(os.walk(folder_path))[0][2]
     files = [(file, f"{os.path.getmtime(os.path.join(folder_path, file))}") for file in files if file[0] != "~"]
 
     conn = sqlite3.connect(os.path.join(global_vars.project_folder, "files_info.db"))
@@ -157,18 +157,18 @@ def check_files_modified(folder):
         files_modified = [file[0] for file in cur.fetchall()]
         #input('Ждем ввод')
         if  files_modified:
-            print(Fore.RED, f"Файлы были пересохранены {files_modified}", Fore.WHITE)            
+            print(Fore.RED, f"Файлы были пересохранены {files_modified}", Fore.WHITE)
             return files_modified
         
         new_files = list(cur.execute(f"SELECT * FROM actual_{table} AS at LEFT JOIN {table} AS t ON t.file = at.file WHERE t.file IS NULL"))
         if  new_files:
-            print(Fore.RED, f"Появились новые файлы {new_files}", Fore.RESET)           
-            return True 
+            print(Fore.RED, f"Появились новые файлы {new_files}", Fore.RESET)
+            return True
 
         deleted_files = list(cur.execute(f"SELECT * FROM {table} AS t LEFT JOIN actual_{table} AS at ON t.file = at.file WHERE at.file IS NULL"))
         if  deleted_files:
-            print(Fore.RED, f"Некоторые файлы были удалены {deleted_files}", Fore.RESET)           
-            return True 
+            print(Fore.RED, f"Некоторые файлы были удалены {deleted_files}", Fore.RESET)
+            return True
     
         return False
         
@@ -183,14 +183,14 @@ def clean_process_folder(project_folder):
     """
 
     if not project_folder:
-        return 
-    
+        return
+
     try:
         processing_files = list(os.walk(os.path.join(project_folder,'.Обработка')))[0][2]
     except:
         print(Fore.RED, "Папка .Обработка не была очищенна. Или её нет или папка проекта не выбрана", Fore.RESET)
         return
-    
+
     for pr_file_number, pr_file in enumerate(processing_files, 1):
         try:
             os.remove(os.path.join(project_folder, '.Обработка', pr_file))

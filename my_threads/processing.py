@@ -33,7 +33,7 @@ class ProcessingThread(QtCore.QThread):
 
 
     def __init__ (self, parent=None):
-        QtCore.QThread.__init__(self, parent) 
+        QtCore.QThread.__init__(self, parent)
 
            
     def check_src_files_available(self):
@@ -88,8 +88,8 @@ class ProcessingThread(QtCore.QThread):
         или размер данных не позволяет это сделать
         """
         sheets_exceeding_dict = {}
-        for sheet_number, sheet in enumerate(wb.sheetnames, 1): 
-            sheets_exceeding_dict[sheet] = ''   
+        for sheet_number, sheet in enumerate(wb.sheetnames, 1):
+            sheets_exceeding_dict[sheet] = ''
             ws = wb[sheet]
 
             # проверяем на размер листа
@@ -102,8 +102,8 @@ class ProcessingThread(QtCore.QThread):
             if ws_max_column > ws_mas_columns:
                 sheets_exceeding_dict[sheet] += f' колонок больше {ws_mas_columns}'
 
-            if ws_max_row > ws_max_rows:               
-                sheets_exceeding_dict[sheet] += f'строк больше {ws_max_rows}'                    
+            if ws_max_row > ws_max_rows:
+                sheets_exceeding_dict[sheet] += f'строк больше {ws_max_rows}'
 
             if not sheets_exceeding_dict[sheet]:
                 sheets_exceeding_dict.pop(sheet)
@@ -142,7 +142,7 @@ class ProcessingThread(QtCore.QThread):
                 return wb
             #return wb
         except Exception:
-            print(f'Авария 1 {prc_file}')            
+            print(f'Авария 1 {prc_file}')
             self.error_message = "Некоторые файлы в папке .Исходники не могут быть обработаны."
             self.err_list.append((md_file, 'Возможно файл повреждён. Попробуйте пересохранить исходный файл.'))
 
@@ -153,29 +153,29 @@ class ProcessingThread(QtCore.QThread):
             print('Авария 2')
             # shutil.copy(os.path.join(global_vars.project_folder, '.Размеченные', file), os.path.join(global_vars.project_folder, '.Аварийные', file))
             shutil.copy(os.path.join(global_vars.project_folder, '.Обработка', prc_file),
-                        os.path.join(global_vars.project_folder, '.Обработка', '~~~if_accident.xlsx'))           
-            print('Авария 3')                
+                        os.path.join(global_vars.project_folder, '.Обработка', '~~~if_accident.xlsx'))
+            print('Авария 3')
             # wb = load_workbook(os.path.join(global_vars.project_folder, '.Аварийные', file), data_only=True)
-            wb = load_workbook(os.path.join(global_vars.project_folder, '.Обработка', '~~~if_accident.xlsx'), data_only=True)            
+            wb = load_workbook(os.path.join(global_vars.project_folder, '.Обработка', '~~~if_accident.xlsx'), data_only=True)
         except:
             pass
 
         try:
-            print('Авария 4') 
+            print('Авария 4')
             os.remove(os.path.join(global_vars.project_folder, '.Обработка', prc_file))
-            print('Авария 5') 
+            print('Авария 5')
         except:
-            print('Авария 666') 
+            print('Авария 666')
 
         return False
 
 
     def premarker(self, project_folder):
-        global_vars.ui.info_label.setStyleSheet('color: blue')  
+        global_vars.ui.info_label.setStyleSheet('color: blue')
 
         source_files = list(os.walk(os.path.join(global_vars.project_folder,'.Исходники')))[0][2]
         prc_files = list(os.walk(os.path.join(global_vars.project_folder,'.Обработка')))[0][2]
-        md_files = list(os.walk(os.path.join(global_vars.project_folder,'.Размеченные')))[0][2]        
+        md_files = list(os.walk(os.path.join(global_vars.project_folder,'.Размеченные')))[0][2]
         
         for source_file_number, source_file in enumerate(source_files, 1):
             print(Fore.YELLOW ,source_file, Fore.RESET)
@@ -203,15 +203,15 @@ class ProcessingThread(QtCore.QThread):
 
             self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                f"Книга {source_file_number} из {len(source_files)}. Открываем для обработки {prc_file}")
-            
+
             # проверяем возможно ли открыть файл и позволяют ли размер данных на листе сдвигать столбцы и строки
             wb = self.check_md_book(md_file, prc_file)
 
             if not wb:
-                continue                      
+                continue
 
             # обрабатываем листы
-            for sheet_number, sheet in enumerate(wb.sheetnames, 1): 
+            for sheet_number, sheet in enumerate(wb.sheetnames, 1):
 
                 ws = wb[sheet]
 
@@ -367,17 +367,17 @@ class ProcessingThread(QtCore.QThread):
                 # Замораживаем ячейки
                 self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                    f"Книга {source_file_number} из {len(source_files)} лист {sheet_number} из {len(wb.sheetnames)}. Закрепляем диапазон {prc_file} {sheet}") 
-                ws.sheet_view.topLeftCell = 'A1'                
-                freeze_cell = ws['C3']             
+                ws.sheet_view.topLeftCell = 'A1'
+                freeze_cell = ws['C3']
                 ws.freeze_panes = freeze_cell
 
                 # Заполняем верхний заголовок
                 # В ключе словаря первая цифра номер колонки, вторая номер строки
                 # cell_khaki = styles.PatternFill(start_color='#c4bd97', fill_type='solid')
-                cell_khaki = styles.PatternFill(start_color='C4BD97', fill_type='solid')                
+                cell_khaki = styles.PatternFill(start_color='C4BD97', fill_type='solid')
                 cell_white = styles.PatternFill(start_color='FFFFFF', fill_type='solid')
                 ws.row_dimensions[1].height = 45
-                ws.row_dimensions[2].height = 45                
+                ws.row_dimensions[2].height = 45
 
                 header = {
                     (1, 3): ('№', cell_khaki),
@@ -410,16 +410,16 @@ class ProcessingThread(QtCore.QThread):
 
             # Сохраняем размеченную книгу.'
             self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                               f"Книга {source_file_number} из {len(source_files)}. Сохраняем книгу {prc_file}")  
+                               f"Книга {source_file_number} из {len(source_files)}. Сохраняем книгу {prc_file}")
 
-            wb.save(os.path.join(project_folder,'.Обработка', prc_file))            
+            wb.save(os.path.join(project_folder,'.Обработка', prc_file))
             wb.close()
             shutil.move(os.path.join(project_folder,'.Обработка', prc_file), os.path.join(project_folder,'.Размеченные', md_file))
 
 
 
     def all_columns(self, project_folder):
-        global_vars.ui.info_label.setStyleSheet('color: blue')          
+        global_vars.ui.info_label.setStyleSheet('color: blue')
 
         marked_folder = os.path.join(project_folder,'.Размеченные')
 
@@ -582,8 +582,8 @@ class ProcessingThread(QtCore.QThread):
                 df = pd.DataFrame(self.wrn_list)
                 df.to_excel(os.path.join(global_vars.project_folder, 'columns.xlsx'), index=None, header=None)
                 
-            refresh_files_info('.Исходники')        
-            refresh_files_info('.Размеченные')  
+            refresh_files_info('.Исходники')
+            refresh_files_info('.Размеченные')
 
 
         if not self.warning_message:
@@ -600,12 +600,12 @@ class ProcessingThread(QtCore.QThread):
                 df = pd.DataFrame(self.err_list)
                 df.to_excel(os.path.join(global_vars.project_folder, 'columns.xlsx'), index=None, header=None)
 
-        if not self.error_message and not self.warning_message:            
+        if not self.error_message and not self.warning_message:
             self.all_columns(global_vars.project_folder)
         else:
             if self.err_list:
                 df = pd.DataFrame(self.err_list)
-                df.to_excel(os.path.join(global_vars.project_folder, 'columns.xlsx'), index=None, header=None)            
+                df.to_excel(os.path.join(global_vars.project_folder, 'columns.xlsx'), index=None, header=None)
 
                   
 
@@ -618,54 +618,54 @@ class ProcessingThread(QtCore.QThread):
 
 
     def on_started(self): # Вызывается при запуске потока
-        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(False)   
-        global_vars.ui.pushButtonXLStoXLSX.setEnabled(False)                
+        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(False)
+        global_vars.ui.pushButtonXLStoXLSX.setEnabled(False)
         global_vars.ui.pushButtonProcessing.setEnabled(False)
-        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)        
+        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)
         global_vars.ui.pushButtonConcat.setEnabled(False)
         global_vars.ui.pushButtonMakeFiles.setEnabled(False)
-        global_vars.ui.info_label.setStyleSheet('color: blue')        
+        global_vars.ui.info_label.setStyleSheet('color: blue')
 
 
     def on_finished(self): # Вызывается при завершении потока
-        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)  
-        global_vars.ui.pushButtonXLStoXLSX.setEnabled(True)     
+        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)
+        global_vars.ui.pushButtonXLStoXLSX.setEnabled(True)
         global_vars.ui.pushButtonProcessing.setEnabled(True)
-        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(True) 
-        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(True)                
+        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(True)
+        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(True)
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(True)
 
 
         if self.error_message:
-            global_vars.ui.info_label.setStyleSheet('color: red')             
+            global_vars.ui.info_label.setStyleSheet('color: red')
             global_vars.ui.info_label.setText(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                               f"{self.error_message.replace('\n',' ')}")
             QtWidgets.QMessageBox.critical(None,
                                            self.message_title,
                                            self.error_message,
                                            buttons=QtWidgets.QMessageBox.StandardButton.Ok)
-            refresh_files_info('.Исходники')        
-            refresh_files_info('.Размеченные')             
+            refresh_files_info('.Исходники')
+            refresh_files_info('.Размеченные')
 
         elif self.warning_message:
             # print(Fore.RED, self.err_list, Fore.RED)
-            global_vars.ui.info_label.setStyleSheet('color: red')             
+            global_vars.ui.info_label.setStyleSheet('color: red')
             global_vars.ui.info_label.setText(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                               f"{self.warning_message.replace('\n',' ')}")
             
             QtWidgets.QMessageBox.warning(None,
                                            self.message_title,
                                            self.warning_message,
-                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)             
+                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)
         else:
-            global_vars.ui.info_label.setStyleSheet('color: green')             
+            global_vars.ui.info_label.setStyleSheet('color: green')
             global_vars.ui.info_label.setText(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
                                               f"Обработка завершена. Открываем columns.xlsx на рабочем столе.")
-            refresh_files_info('.Исходники')        
-            refresh_files_info('.Размеченные')  
+            refresh_files_info('.Исходники')
+            refresh_files_info('.Размеченные')
 
 
         # if os.path.exists(os.path.join(global_vars.project_folder, "columns.xlsx")):
-        os.startfile(os.path.join(global_vars.project_folder, "columns.xlsx"))    
+        os.startfile(os.path.join(global_vars.project_folder, "columns.xlsx"))

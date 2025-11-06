@@ -69,6 +69,7 @@ def translit(kir):
                            '.':'_'})
     return kir.lower().translate(translation)
 
+"""
 def load_file_sheet_name():
         MyComboBoxFormats.set_eanbled_all(False)
         if ('loaded_file' in global_vars.__dict__.keys() and 
@@ -79,20 +80,20 @@ def load_file_sheet_name():
                 print(Fore.CYAN,'Загружаем лист целиком (A)',Fore.WHITE)
 
                 #global_vars.header_row = 0
-                global_vars.ui.footer_label.setStyleSheet('color: blue')                
+                global_vars.ui.footer_label.setStyleSheet('color: blue')
 
                 if global_vars.file[-4:] in ['.xls', 'xlsx', 'xlsm', 'xlsb', '.ods']:
-                    global_vars.ui.footer_label.setText(f'Загружаем весь лист "{global_vars.ui.comboSheets.currentText()}"...')                    
+                    global_vars.ui.footer_label.setText(f'Загружаем весь лист "{global_vars.ui.comboSheets.currentText()}"...')
                     global_vars.df = pd.read_excel(global_vars.file, header = None, dtype= 'string', engine = 'calamine', sheet_name = global_vars.sheet_name)
                 else:
-                    global_vars.ui.footer_label.setText(f'Загружаем весь файл...')                    
+                    global_vars.ui.footer_label.setText(f'Загружаем весь файл...')
                     global_vars.df = from_file_to_csv(global_vars.file)
                 global_vars.df.fillna('', inplace = True)
                 global_vars.df.index += 1
                 global_vars.df.can_load_file = True
                 global_vars.loaded_file = global_vars.file
                 global_vars.loaded_sheet_name = global_vars.sheet_name  
-                global_vars.ui.footer_label.setStyleSheet('color: green')                      
+                global_vars.ui.footer_label.setStyleSheet('color: green')
                 global_vars.ui.footer_label.setText(f'Весь лист "{global_vars.ui.comboSheets.currentText()}" загружен!')
                  
         else:
@@ -109,11 +110,12 @@ def load_file_sheet_name():
             global_vars.df.can_load_file = True
             global_vars.loaded_file = global_vars.file
             global_vars.loaded_sheet_name = global_vars.sheet_name 
-            global_vars.ui.footer_label.setStyleSheet('color: green')                      
+            global_vars.ui.footer_label.setStyleSheet('color: green')
             global_vars.ui.footer_label.setText(f'Весь лист "{global_vars.ui.comboSheets.currentText()}" загружен!')
              
         MyComboBoxFormats.set_eanbled_all(True)
         print(Fore.CYAN,'Загружаем лист целиком (C)',Fore.WHITE)
+"""
 
 def from_file_to_csv(f):
     with open(f, encoding='utf-8') as fn:
@@ -208,33 +210,32 @@ def fill_in_table():
     if header_errors_list:
         fill_in_err_table(['колонка', 'ошибка'], header_errors_list)
         global_vars.ui.err_tableWidget.setVisible(True)
-        global_vars.ui.pushButtonPreprocessing.setEnabled(False)              
+        global_vars.ui.pushButtonPreprocessing.setEnabled(False)
     else:
-        global_vars.ui.pushButtonPreprocessing.setEnabled(True)          
+        global_vars.ui.pushButtonPreprocessing.setEnabled(True)
 
 def header_down(self):
     global_vars.ui.footer_text.setVisible(False)
-    global_vars.ui.pushButtonLoader.setEnabled(False)    
+    global_vars.ui.pushButtonLoader.setEnabled(False)
     global_vars.ui.err_tableWidget.setVisible(False)
-    if global_vars.header_row > 1:        
-        global_vars.header_row -= 1 
+    if global_vars.header_row > 1:
+        global_vars.header_row -= 1
 
-        #fill_in_table()  
         if global_vars.header_row == 0: 
-            global_vars.ui.footer_label.setStyleSheet('color: red')                
+            global_vars.ui.footer_label.setStyleSheet('color: red')
             global_vars.ui.footer_label.setText(f"Достигнуто начало файла!")
         else:   
-            global_vars.ui.footer_label.setStyleSheet('color: green')             
+            global_vars.ui.footer_label.setStyleSheet('color: green')
             global_vars.ui.footer_label.setText(f"Заголовки опущены! Заголовки в строке {global_vars.header_row}")
     else:
-        global_vars.ui.footer_label.setStyleSheet('color: red')        
-        global_vars.ui.footer_label.setText("Ниже опустить не возможно, заголовки!") 
+        global_vars.ui.footer_label.setStyleSheet('color: red')
+        global_vars.ui.footer_label.setText("Ниже опустить не возможно, заголовки!")
     fill_in_table()
     '''
     header_errors_list = header_checker(global_vars.sample_columns, global_vars.horizontal_headers)
     if header_errors_list:
         fill_in_err_table(['колонка', 'ошибка'], header_errors_list)
-        global_vars.ui.err_tableWidget.setVisible(True) 
+        global_vars.ui.err_tableWidget.setVisible(True)
     '''
 
 def convert_str_to_date(s):
@@ -246,4 +247,4 @@ def convert_str_to_date(s):
 
 if __name__ == '__main__':
     print(convert_str_to_date('03.05.2024  0:00:00'))
-    print(convert_str_to_date('1970-01-01 03:00:00'))    
+    print(convert_str_to_date('1970-01-01 03:00:00'))

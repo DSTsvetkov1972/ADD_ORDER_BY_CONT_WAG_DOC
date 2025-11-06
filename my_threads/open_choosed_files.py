@@ -17,7 +17,7 @@ class OpenChoosedFilesThread(QtCore.QThread):
 
         self.error_message = ""
         self.warning_message = ""
-        self.info_message = ""       
+        self.info_message = ""
 
         
         folder = os.path.join(global_vars.project_folder,'.Размеченные') if self.md_files \
@@ -25,7 +25,7 @@ class OpenChoosedFilesThread(QtCore.QThread):
 
         for file in files_list_in_pyperclip:
             file = file if self.md_files else file[3:]
-            file_to_start = os.path.join(folder, file)     
+            file_to_start = os.path.join(folder, file)
             if not os.path.exists(file_to_start):
                 self.error_message = f"Файл {file_to_start} не найден в папке .Размеченные/"
                 return
@@ -60,4 +60,4 @@ class OpenChoosedFilesThread(QtCore.QThread):
             QtWidgets.QMessageBox.information(None,
                 self.message_title,
                 self.info_message,
-                buttons=QtWidgets.QMessageBox.StandardButton.Ok)    
+                buttons=QtWidgets.QMessageBox.StandardButton.Ok)

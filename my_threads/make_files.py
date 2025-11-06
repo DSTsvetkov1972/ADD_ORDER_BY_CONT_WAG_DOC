@@ -7,13 +7,13 @@ import shutil
 import pandas as pd
 from time import sleep
 from my_threads.functions import check_files_modified
-#from openpyxl import load_workbook, 
+# from openpyxl import load_workbook, 
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles.borders import Border, Side
 from openpyxl import styles
-#from openpyxl.utils.cell import get_column_letter
-from my_functions.sql import sql
+# from openpyxl.utils.cell import get_column_letter
+from my_functions.sql import sql_rks
 from my_functions.dwh import get_df_of_click
 from my_functions.for_make_files import make_template
 import pyperclip
@@ -25,12 +25,12 @@ class MakeFilesThread(QtCore.QThread):
     def on_signal(self,mysignal):
         global_vars.ui.info_label.setStyleSheet('color: blue')
         print("vs nen")
-        print(str(mysignal))       
+        print(str(mysignal))
         global_vars.ui.info_label.setText(mysignal)
 
 
     def __init__ (self, parent=None):
-        QtCore.QThread.__init__(self, parent) 
+        QtCore.QThread.__init__(self, parent)
         self.message_title = "Делаем файлы"
         
         
@@ -44,7 +44,7 @@ class MakeFilesThread(QtCore.QThread):
         for file in marked_files:
             sleep(0.0001)
             self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                               f"Проверяем наличие файла {file} из ./Размеченные в .Исходники/")             
+                               f"Проверяем наличие файла {file} из ./Размеченные в .Исходники/")
             if file[3:] not in source_files: # file[3:] чтобы откусить приставку md_ в начале
                 try:
                     os.remove(os.path.join(global_vars.project_folder, '.Размеченные', file))
@@ -56,8 +56,6 @@ class MakeFilesThread(QtCore.QThread):
         return ("\n" + ">" + "\n").join(errors_list)
 
 
-
-
     def concat_dfs(self, project_folder):
         global_vars.ui.info_label.setStyleSheet('color: blue')
         #project_folder = os.path.join(r'C:\Users\TsvetkovDS\Documents\Оперативная папка\.Тест')
@@ -67,8 +65,8 @@ class MakeFilesThread(QtCore.QThread):
         #source_row_field_name = f"source_row_({random_suffix})"
 
         file_field_name = "source_file"
-        sheet_field_name = "sorce_sheet"        
-        source_row_field_name = "source_row"        
+        sheet_field_name = "sorce_sheet"
+        source_row_field_name = "source_row"
 
         marked_folder = os.path.join(project_folder, r".Размеченные")
         files = [file for file in list(os.walk(os.path.join(project_folder, '.Размеченные')))[0][2] if file[0] != "~"]
@@ -78,16 +76,16 @@ class MakeFilesThread(QtCore.QThread):
         for file_number, file in enumerate(files, 1):
             with pd.ExcelFile(os.path.join(marked_folder,file)) as xlsx_file:
                 sheets = xlsx_file.sheet_names
-                    
+
             for sheet_number, sheet in enumerate(sheets, 1):
                 # sleep(0.0001)
                 self.mysignal.emit(f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
-                                   f"Книга {file_number} из {len(files)} лист {sheet_number} из {len(sheets)}. " 
-                                   f"Подготавливаем к объединению {file} лист {sheet}")  
+                                   f"Книга {file_number} из {len(files)} лист {sheet_number} из {len(sheets)}. "
+                                   f"Подготавливаем к объединению {file} лист {sheet}")
                 file_info = columns_info_df[(columns_info_df['file'] == file) &
                                             (columns_info_df['sheet'] == sheet) &
                                             (columns_info_df['Ошибки маркировки'] == 'ok')]
-                
+
                 if not file_info.empty:
                     s = int(file_info['s'].iloc[0]) - 1
                     f = int(file_info['f'].iloc[0])
@@ -98,12 +96,12 @@ class MakeFilesThread(QtCore.QThread):
                     column_names_without_ffill = [column_name for column_name in file_df.iloc[0] if pd.notna(column_name)]
                     file_df_without_ffill = file_df_without_ffill[column_names_without_ffill]
 
-                    # file_df_with_ffill = file_df.fillna(method='ffill')     
-                    file_df_with_ffill = file_df.ffill()                       
+                    # file_df_with_ffill = file_df.fillna(method='ffill')
+                    file_df_with_ffill = file_df.ffill()
                     file_df_with_ffill = file_df_with_ffill.iloc[s:f]
                     file_df_with_ffill.columns = file_df.iloc[1]
                     column_names_with_ffill = [column_name for column_name in file_df.iloc[1] if pd.notna(column_name)]
-                    file_df_with_ffill = file_df_with_ffill[column_names_with_ffill]           
+                    file_df_with_ffill = file_df_with_ffill[column_names_with_ffill]
 
                     file_df = pd.concat([file_df_without_ffill, file_df_with_ffill], axis=1)
 
@@ -137,7 +135,7 @@ class MakeFilesThread(QtCore.QThread):
         
         if result_df.empty:
             global_vars.ui.info_label.setStyleSheet('color: red') 
-            self.error_message = 'Нет корректных размеченных файлов!'                
+            self.error_message = 'Нет корректных размеченных файлов!'
             return
 
         print("Датафреймы слиты в один для загрузки в DWH")
@@ -156,10 +154,10 @@ class MakeFilesThread(QtCore.QThread):
         #print(scep_series)
         scep_series.drop_duplicates(inplace=True)
         scep_str = '\n'.join(scep_series)
-        #pyperclip.copy(scep_str)
-        sql_str = sql(scep_str)
+        pyperclip.copy(scep_str)
+        sql_str = sql_rks(scep_str)
         #pyperclip.copy(sql_str)
-        #print("в буфере")
+        print("в буфере")
 
         self.mysignal.emit(
             f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
@@ -168,6 +166,7 @@ class MakeFilesThread(QtCore.QThread):
 
         
         sql_res_df = get_df_of_click(sql_str)
+        print(sql_res_df)
         
 
 
@@ -183,7 +182,7 @@ class MakeFilesThread(QtCore.QThread):
             file = file_sheet_tuple[1][0]
             sheet = file_sheet_tuple[1][1]
 
-            file_1s = f'Форма отчета исполнителя МЛТ груженный, порожний_{file}_{sheet}.xlsx'                        
+            file_1s = f'Форма отчета исполнителя МЛТ груженный, порожний_{file}_{sheet}.xlsx'
 
             self.mysignal.emit(
                 f"{datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")} "
@@ -206,7 +205,7 @@ class MakeFilesThread(QtCore.QThread):
             df_to_1s = file_sheet_tuple[2][[
                 '№', 'Дата отправки', 'Номер накладной', '№ Контейнера', '№ Вагона',
                 'Ст. отправления', 'Ст. назначения', ' тариф груженый', 'использование пути', 'Номер заказа',
-                'проверка', 'invoiceid' ,'invdatecreate', 'invfrwsubcode'
+                'проверка' # , 'invoiceid' ,'invdatecreate', 'invfrwsubcode'
             ]]
             
             """
@@ -284,7 +283,7 @@ class MakeFilesThread(QtCore.QThread):
                 ws[cell].border = thin_border
                 ws[cell].alignment = styles.Alignment(wrap_text=True, horizontal="center", vertical="center")
                 ws[cell].font = styles.Font(name='Times New Roman', size=9, bold=False, color='000000')
-                #ws.row_dimensions[8].width = 29                                                                         
+                #ws.row_dimensions[8].width = 29
 
             wb.save(ready_file)        
             # os.remove(processing_file)
@@ -303,16 +302,16 @@ class MakeFilesThread(QtCore.QThread):
         """
         if os.path.exists(os.path.join(global_vars.project_folder, "~$result.xlsx")):
             global_vars.ui.info_label.setStyleSheet('color: red') 
-            self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'                
+            self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'
             global_vars.ui.info_label.setText(self.error_message)
-            os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))                   
+            os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))
             return
         
         if os.path.exists(os.path.join(global_vars.project_folder, "~$result.csv")):
             global_vars.ui.info_label.setStyleSheet('color: red') 
-            self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаприсан!'                
+            self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаприсан!'
             global_vars.ui.info_label.setText(self.error_message)
-            # os.startfile(os.path.join(global_vars.project_folder, "result.csv"))                   
+            # os.startfile(os.path.join(global_vars.project_folder, "result.csv"))
             return
         """
 
@@ -336,9 +335,9 @@ class MakeFilesThread(QtCore.QThread):
                 os.remove(os.path.join(global_vars.project_folder, "result.xlsx"))
             except PermissionError:
                 global_vars.ui.info_label.setStyleSheet('color: red') 
-                self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'                
+                self.error_message = 'Закройте файл result.xlsx и снова нажмите "Объединить"'
                 #global_vars.ui.info_label.setText(self.error_message)
-                os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))                
+                os.startfile(os.path.join(global_vars.project_folder, "result.xlsx"))
                 return
         
 
@@ -347,14 +346,14 @@ class MakeFilesThread(QtCore.QThread):
                 os.remove(os.path.join(global_vars.project_folder, "result.xlsx"))
             except PermissionError:
                 global_vars.ui.info_label.setStyleSheet('color: red') 
-                self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаписан!'                
+                self.error_message = 'Файл result.csv занят другим приложением и не может быть перезаписан!'
                 #global_vars.ui.info_label.setText(self.error_message)
-                # os.startfile(os.path.join(global_vars.project_folder, "result.#sv"))                   
+                # os.startfile(os.path.join(global_vars.project_folder, "result.#sv"))
                 return
         """
 
         self.error_message = ""
-        self.warning_message = ""        
+        self.warning_message = ""
         self.error_message = self.clean_folder_marked(global_vars.project_folder)
         if not self.error_message:
             try:
@@ -366,7 +365,7 @@ class MakeFilesThread(QtCore.QThread):
                 )
             except PermissionError:
                 global_vars.ui.info_label.setStyleSheet('color: red') 
-                self.error_message = 'Некоторые файлы из папки ".Файлы для 1-С" открыты на рабочем столе. Закройте их и снова запустите создание файлов!'                
+                self.error_message = 'Некоторые файлы из папки ".Файлы для 1-С" открыты на рабочем столе. Закройте их и снова запустите создание файлов!'
                 return
             os.mkdir(
                 os.path.join(
@@ -377,50 +376,51 @@ class MakeFilesThread(QtCore.QThread):
             self.concat_dfs(global_vars.project_folder)
 
 
-    def on_clicked(self):     
-        self.start() # Запускаем поток  
+    def on_clicked(self):
+        self.start() # Запускаем поток
     
 
     def on_started(self): # Вызывается при запуске потока
-        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(False)        
+        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(False)
+        global_vars.ui.pushButtonXLStoXLSX.setEnabled(False)
         global_vars.ui.pushButtonProcessing.setEnabled(False)
-        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)        
+        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(False)
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(False)
-        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)           
-        global_vars.ui.pushButtonConcat.setEnabled(False)        
+        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(False)
+        global_vars.ui.pushButtonConcat.setEnabled(False)
         global_vars.ui.pushButtonMakeFiles.setEnabled(False)
 
     def on_finished(self): # Вызывается при завершении потока
-        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)  
+        global_vars.ui.pushButtonChooseProjectFolder.setEnabled(True)
+        global_vars.ui.pushButtonXLStoXLSX.setEnabled(True)        
         global_vars.ui.pushButtonProcessing.setEnabled(True)
-        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(True)        
+        global_vars.ui.pushButtonOpenChoosedFiles.setEnabled(True)
         global_vars.ui.pushButtonOpenChoosedMDFiles.setEnabled(True)
-        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(True)           
+        global_vars.ui.pushButtonDelChoosedMDFiles.setEnabled(True)
 
         if self.is_src_files_modifyed or self.is_md_files_modifyed:
             global_vars.ui.pushButtonConcat.setEnabled(False)
-            global_vars.ui.pushButtonMakeFiles.setEnabled(False)                 
+            global_vars.ui.pushButtonMakeFiles.setEnabled(False)
         else:
             global_vars.ui.pushButtonConcat.setEnabled(True)
-            global_vars.ui.pushButtonMakeFiles.setEnabled(True)             
+            global_vars.ui.pushButtonMakeFiles.setEnabled(True)
 
-         
 
         if self.error_message:
-            global_vars.ui.info_label.setStyleSheet('color: red')             
+            global_vars.ui.info_label.setStyleSheet('color: red')
             global_vars.ui.info_label.setText(self.error_message.replace('\n',' '))
             QtWidgets.QMessageBox.critical(None,
                                            self.message_title,
                                            self.error_message,
-                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok) 
+                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)
         elif self.warning_message:
-            global_vars.ui.info_label.setStyleSheet('color: red')             
+            global_vars.ui.info_label.setStyleSheet('color: red')
             global_vars.ui.info_label.setText(self.warning_message.replace('\n',' '))
             QtWidgets.QMessageBox.warning(None,
                                            self.message_title,
                                            self.warning_message,
-                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)             
+                                           buttons=QtWidgets.QMessageBox.StandardButton.Ok)
         else:
-            global_vars.ui.info_label.setStyleSheet('color: green')             
+            global_vars.ui.info_label.setStyleSheet('color: green')
             global_vars.ui.info_label.setText('Файлы для загрузки в 1-С подготовленны!')
             os.startfile(os.path.join(global_vars.project_folder, '.Файлы для 1-С'))

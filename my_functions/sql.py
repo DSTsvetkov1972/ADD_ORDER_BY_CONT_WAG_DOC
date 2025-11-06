@@ -1,4 +1,4 @@
-def sql (doc_cont_vag):
+def sql_etran (doc_cont_vag):
     return f"""WITH
 YOUR_EXCEL AS (
 SELECT
@@ -115,3 +115,54 @@ FROM
 	YOUR_EXCEL
 	LEFT JOIN ETRAN ON ETRAN.carnumber  = YOUR_EXCEL.`№ Вагона` AND ETRAN.contnumber  = YOUR_EXCEL.`№ Контейнера` AND ETRAN.invnumber  = YOUR_EXCEL.`Номер накладной`
 """
+
+def sql_rks (vag_doc_cont):
+    return f"""WITH
+YOUR_EXCEL AS (
+SELECT
+--МЕЖДУ ОДИНАРНЫХ КОВЫЧЕК ПОДСТАВЬТЕ `№ платформы`,`№ отправки`,`№ контейнера` ИЗ ЭКСЕЛЬ
+/*'
+54287446|38376856|TKRU4724478
+97923593|38380262|SORU4046208
+97923593|38380261|WNGU5204971
+94959509|38378595|DLRU0082228
+' AS `Сцеп`*/
+'
+{ vag_doc_cont }
+' AS `Сцеп`
+--) SELECT * FROM YOUR_EXCEL
+),
+YOUR_EXCEL AS (
+SELECT
+	arrayJoin(splitByChar(char(10), replace(`Сцеп`, char(13), ''))) AS `№ Вагона|Номер накладной|№ Контейнера`
+FROM
+	YOUR_EXCEL
+WHERE
+	length(`№ Вагона|Номер накладной|№ Контейнера`)>2
+--) SELECT count(*) FROM YOUR_EXCEL
+),
+YOUR_EXCEL AS (
+SELECT
+	`№ Вагона|Номер накладной|№ Контейнера`,
+	(splitByChar('|', `№ Вагона|Номер накладной|№ Контейнера`) AS parts)[1] AS `№ Вагона`,
+	parts[2] AS `Номер накладной`,
+	parts[3] AS `№ Контейнера`
+FROM
+	YOUR_EXCEL
+--) SELECT * FROM YOUR_EXCEL --WHERE `№ Вагона`='94207792'
+)
+SELECT
+	YOUR_EXCEL.`№ Вагона|Номер накладной|№ Контейнера` AS `Сцеп`,
+	arrayStringConcat(groupArray(DISTINCT service_details_order_id), '; ') AS `Номер заказа`,
+	multiIf(
+		`Номер заказа`='', 'не определился',
+		locate(';', `Номер заказа`)<>0, 'несколько заказов', 
+		substring(`Номер заказа`, 1, 2)<>'32' AND substring(`Номер заказа`, 1, 2)<>'60', 'странный результат',
+		Null
+	) AS `проверка`
+FROM
+	(SELECT DISTINCT * FROM rks__directly WHERE client_number_id <> '0009309810' AND is_deleted=False AND date_end >= addDays(NOW(), -365)) AS RKS
+	INNER JOIN YOUR_EXCEL ON RKS.document_reasons_number=YOUR_EXCEL.`Номер накладной` AND RKS.equipment_number=YOUR_EXCEL.`№ Контейнера` AND RKS.service_details_wagon_number=YOUR_EXCEL.`№ Вагона`
+GROUP BY
+	YOUR_EXCEL.`№ Вагона|Номер накладной|№ Контейнера`
+    """

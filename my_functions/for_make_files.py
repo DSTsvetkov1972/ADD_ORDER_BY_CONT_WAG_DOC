@@ -1,9 +1,6 @@
-from openpyxl.utils.cell import get_column_letter
+# from openpyxl.utils.cell import get_column_letter
 from openpyxl import Workbook, styles
-from openpyxl.utils.cell import get_column_letter
-from openpyxl.worksheet.datavalidation import DataValidationList
 from openpyxl.styles.borders import Border, Side
-
 import os
 
 thin_border = Border(left=Side(style='thin'),
@@ -20,7 +17,7 @@ def make_template(ws):
     ws.column_dimensions["A"].width = 5
     ws.column_dimensions["B"].width = 18
     ws.column_dimensions["C"].width = 20
-    ws.column_dimensions["D"].width = 17   
+    ws.column_dimensions["D"].width = 17
     ws.column_dimensions["E"].width = 13
     ws.column_dimensions["F"].width = 19
     ws.column_dimensions["G"].width = 23
@@ -48,18 +45,18 @@ def make_template(ws):
         (10, 1): ('№', cell_khaki, thin_border),
         (10, 2): ('Дата отправки', cell_khaki, thin_border),
         (10, 3): ('Номер накладной', cell_khaki, thin_border),
-        (10, 4): ('№ Контейнера', cell_khaki, thin_border),        
+        (10, 4): ('№ Контейнера', cell_khaki, thin_border),
         (10, 5): ('№ Вагона', cell_khaki, thin_border),
         (10, 6): ('Ст. отправления', cell_khaki, thin_border),
         (10, 7): ('Ст. назначения', cell_khaki, thin_border),
         (10, 8): (' тариф груженый', cell_khaki, thin_border),
-        (10, 9): ('использование пути', cell_khaki, thin_border),               
+        (10, 9): ('использование пути', cell_khaki, thin_border),
         (10, 10): ('Номер заказа', cell_khaki, thin_border),
 
         (10, 11): ('проверка', styles.PatternFill(), None),
-        (10, 12): ('invoiceid', styles.PatternFill(), None),
-        (10, 13): ('invdatecreate', styles.PatternFill(), None),               
-        (10, 14): ('invfrwsubcode', styles.PatternFill(), None),
+        #(10, 12): ('invoiceid', styles.PatternFill(), None),
+        #(10, 13): ('invdatecreate', styles.PatternFill(), None),
+        #(10, 14): ('invfrwsubcode', styles.PatternFill(), None),
         }
 
     for (y, x), (cell_value, cell_fill, cell_border) in header.items():

@@ -10,9 +10,9 @@ class LogInCheck(QtCore.QThread):
 
 
     def run(self):
-        if not os.path.exists(os.path.join('.config')): 
+        if not os.path.exists(os.path.join('.config')):
             global_vars.ui.action_log_in_check.setEnabled(False)
-            global_vars.ui.action_log_out.setEnabled(False)            
+            global_vars.ui.action_log_out.setEnabled(False)
             global_vars.ui.login_label.setStyleSheet("color: red")
             global_vars.ui.login_label.setText("Подключитесь к DWH!")
             global_vars.log_in_status = False
@@ -29,7 +29,7 @@ class LogInCheck(QtCore.QThread):
                                 user     = params[3],
                                 password = params[4],
                                 secure   = True,
-                                verify   = False) 
+                                verify   = False)
                 try:
                     connection.execute(f"""CREATE OR REPLACE TABLE {params[2]}.load_any_table_2_connection_test
                             ENGINE = MergeTree()
@@ -38,25 +38,22 @@ class LogInCheck(QtCore.QThread):
                     connection.execute(f"""DROP TABLE IF EXISTS {params[2]}.load_any_table_2_connection_test""")
 
                     global_vars.ui.login_label.setStyleSheet("color: green")
-                    global_vars.ui.login_label.setText(f"Пользователь {params[3]} подключен к базе {params[2]}") 
+                    global_vars.ui.login_label.setText(f"Пользователь {params[3]} подключен к базе {params[2]}")
                     global_vars.ui.action_log_in_check.setEnabled(True)
                     global_vars.ui.action_log_out.setEnabled(True) 
-                    global_vars.log_in_status = True                
+                    global_vars.log_in_status = True
                     return  
                 except:
-                    connection.execute("""SELECT 1""")   
+                    connection.execute("""SELECT 1""")
                     global_vars.ui.login_label.setStyleSheet("color: green")
-                    global_vars.ui.login_label.setText(f"Пользователь {params[3]} подключен к базе {params[2]}, НО БЕЗ ПРАВА СОЗДАВАТЬ ТАБЛИЦЫ!!!") 
+                    global_vars.ui.login_label.setText(f"Пользователь {params[3]} подключен к базе {params[2]}, НО БЕЗ ПРАВА СОЗДАВАТЬ ТАБЛИЦЫ!!!")
                     global_vars.ui.action_log_in_check.setEnabled(True)
-                    global_vars.ui.action_log_out.setEnabled(True)  
-                    global_vars.log_in_status = False 
+                    global_vars.ui.action_log_out.setEnabled(True)
+                    global_vars.log_in_status = False
             except:
                 global_vars.ui.login_label.setStyleSheet("color: red")
-                global_vars.ui.login_label.setText(f"Не можем подключить {params[3]} к базе {params[2]}, проверьте параметры подключения. Возможно не работает DWH, нет интернета или...")                              
+                global_vars.ui.login_label.setText(f"Не можем подключить {params[3]} к базе {params[2]}, проверьте параметры подключения. Возможно не работает DWH, нет интернета или...")
                 global_vars.log_in_status = False
-
-         
-
 
 
     def starter(self):
